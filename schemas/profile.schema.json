@@ -32,9 +32,19 @@
     },
     "supported_platforms": {
       "type": "array",
+      "uniqueItems": true,
       "items": {
-        "type": "string"
-      }
+        "type": "string",
+        "enum": [
+          "windows-x64",
+          "windows-arm64",
+          "macos-x64",
+          "macos-arm64",
+          "linux-x64",
+          "linux-arm64"
+        ]
+      },
+      "description": "Platforms this profile is intended for. Optional; when absent the profile is considered platform-neutral and each package's own support is decisive."
     },
     "packages": {
       "type": "array",
@@ -48,7 +58,9 @@
         ],
         "properties": {
           "package_id": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^[a-z0-9]+(\\.[a-z0-9-]+)+$",
+            "description": "Stable package ID as published in the catalog (package manifest id)."
           },
           "required": {
             "type": "boolean"
@@ -63,16 +75,42 @@
             ]
           },
           "version": {
-            "type": "string"
+            "type": "string",
+            "description": "Concrete version. Required when version_policy is exact; otherwise advisory."
           },
           "channel": {
-            "type": "string"
+            "type": "string",
+            "description": "Channel name. Required when version_policy is channel."
           },
           "reason": {
-            "type": "string"
+            "type": "string",
+            "description": "Human-readable explanation shown in the profile editor and plan review."
           }
-        }
-      }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "version_policy": { "const": "exact" }
+              }
+            },
+            "then": {
+              "required": ["version"]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "version_policy": { "const": "channel" }
+              }
+            },
+            "then": {
+              "required": ["channel"]
+            }
+          }
+        ]
+      },
+      "description": "Package selections. Package IDs must be unique within a profile; the publication validator (Phase 2) rejects duplicates."
     }
   }
 }

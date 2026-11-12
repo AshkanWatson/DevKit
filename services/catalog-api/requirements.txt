@@ -1,0 +1,5 @@
+# DevKit catalog API — Python dependencies.
+# Local dev: python -m pip install -r requirements.txt
+# CI installs exactly this file (see .github/workflows/ci.yml).
+Django>=6.0,<7.0
+djangorestframework>=3.16,<4.0

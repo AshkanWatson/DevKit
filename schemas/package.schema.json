@@ -15,6 +15,8 @@
     "supported_platforms",
     "versions",
     "default_version_policy",
+    "license_expression",
+    "maintainer",
     "updated_at"
   ],
   "properties": {
@@ -111,6 +113,46 @@
           "release_notes_url": {
             "type": "string",
             "format": "uri"
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "package_id",
+                "required",
+                "version_policy"
+              ],
+              "properties": {
+                "package_id": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9]+(\\.[a-z0-9-]+)+$"
+                },
+                "required": {
+                  "type": "boolean",
+                  "description": "When false, resolution may skip the dependency if it is unavailable for the platform."
+                },
+                "version_policy": {
+                  "type": "string",
+                  "enum": [
+                    "exact",
+                    "stable",
+                    "latest",
+                    "channel"
+                  ]
+                },
+                "version": {
+                  "type": "string",
+                  "description": "Required when version_policy is exact."
+                },
+                "channel": {
+                  "type": "string",
+                  "description": "Required when version_policy is channel."
+                }
+              }
+            },
+            "description": "Dependencies resolved at install time by the Rust resolver. Records reference stable package IDs; circular dependencies are rejected during resolution."
           },
           "artifacts": {
             "type": "array",

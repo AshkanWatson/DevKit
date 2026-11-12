@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "id": "devkit.profile.flutter-developer",
+  "name": "Flutter Developer",
+  "description": "Everything needed to start building Flutter applications: the Flutter SDK, the Dart toolchain it bundles its workflow around, and Android build prerequisites.",
+  "maintainer": "DevKit Catalog Team",
+  "supported_platforms": [
+    "windows-x64",
+    "macos-x64",
+    "macos-arm64",
+    "linux-x64"
+  ],
+  "packages": [
+    {
+      "package_id": "devkit.framework.flutter",
+      "required": true,
+      "version_policy": "stable",
+      "reason": "Primary SDK for Flutter application development."
+    },
+    {
+      "package_id": "devkit.utility.git",
+      "required": true,
+      "version_policy": "stable",
+      "reason": "Flutter tooling requires Git for dependency management."
+    },
+    {
+      "package_id": "devkit.ide.vscode",
+      "required": false,
+      "version_policy": "latest",
+      "reason": "Recommended editor with the official Flutter extension."
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "devkit.profile.python-developer",
+  "name": "Python Developer",
+  "description": "A complete Python development setup: the Python runtime plus commonly used editors and tooling.",
+  "maintainer": "DevKit Catalog Team",
+  "packages": [
+    {
+      "package_id": "devkit.lang.python",
+      "required": true,
+      "version_policy": "exact",
+      "version": "3.12.7",
+      "reason": "Pinned runtime for reproducible team setups; never silently upgraded."
+    },
+    {
+      "package_id": "devkit.utility.git",
+      "required": true,
+      "version_policy": "stable"
+    },
+    {
+      "package_id": "devkit.ide.vscode",
+      "required": false,
+      "version_policy": "channel",
+      "channel": "stable",
+      "reason": "Recommended editor with the official Python extension."
+    }
+  ]
+}

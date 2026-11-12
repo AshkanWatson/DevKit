@@ -1,0 +1,35 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub-cache/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Rust
+target/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+
+# Local state / secrets
+.env
+.env.*
+!.env.example
+*.sqlite
+*.db
+*.log
+*.pem
+*.p12
+*.pfx
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

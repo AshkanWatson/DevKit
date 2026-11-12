@@ -20,15 +20,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate JSON schemas parse
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate schemas and examples
         run: |
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          for path in Path("schemas").glob("*.json"):
-              json.loads(path.read_text(encoding="utf-8"))
-              print(f"valid JSON: {path}")
-          PY
+          python -m pip install --quiet jsonschema
+          python scripts/validate_schemas.py
 
   rust:
     name: Rust checks

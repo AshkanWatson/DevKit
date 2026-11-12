@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Empty state (DESIGN.md §7). Used when a screen has no content yet.
 class EmptyState extends StatelessWidget {

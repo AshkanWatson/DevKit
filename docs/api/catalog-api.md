@@ -1,6 +1,6 @@
 # Catalog API Contract — v1
 
-> **Status:** Phase 0 contract. Endpoints are implemented in Phase 2; the scaffold service (`services/catalog-api/`) responds 501 `NOT_IMPLEMENTED` for catalog endpoints and serves `/health`.
+> **Status:** Phase 2 core implemented in `services/catalog-api/` (models, publication gate, public reads, pagination, ETag, error envelope). Not yet implemented: client-side cache (P2-04, waits on the Phase 1 bridge) and production deployment. Admin publication lives in Django admin, outside this contract.
 
 Base path: `/api/v1/`
 
@@ -11,9 +11,10 @@ Base path: `/api/v1/`
 | GET | `/catalog/packages` | Search/filter/paginate published packages |
 | GET | `/catalog/packages/{package_id}` | Package metadata (full manifest) |
 | GET | `/catalog/packages/{package_id}/versions` | Published versions and platform artifacts |
+| GET | `/catalog/packages/{package_id}/manifest` | Raw JSON manifest document (download) |
 | GET | `/catalog/profiles` | Published profiles |
 | GET | `/catalog/profiles/{profile_id}` | Profile detail |
-| GET | `/catalog/categories` | Available categories |
+| GET | `/catalog/categories` | Available categories with published counts |
 | GET | `/health` | Service health |
 
 ## Query conventions
@@ -43,8 +44,8 @@ Stable envelope on every list endpoint:
 
 ### Caching and conditional requests
 
-- List and detail responses send `ETag` and honor `If-None-Match` with `304`.
-- `Cache-Control` is explicit on every response; the client stores both payload and validator in `catalog_cache` (docs/architecture/local-database.md).
+- List and detail responses send `ETag` and honor `If-None-Match` with `304` (middleware on all `/api/v1/` GET 200s).
+- `Cache-Control: public, max-age=300` is set on every successful GET; the client stores both payload and validator in `catalog_cache` (docs/architecture/local-database.md).
 
 ### Identity and timestamps
 
@@ -55,6 +56,10 @@ Stable envelope on every list endpoint:
 ## Response bodies
 
 `GET /catalog/packages/{package_id}` returns the package manifest as published (`schemas/package.schema.json`), i.e. the full record including `versions` with artifact descriptors. The list endpoint returns summaries only (identity, display fields, category, platform support, default policy) — not artifact lists — so list caching stays cheap.
+
+`GET /catalog/packages/{package_id}/versions` returns `{"count": n, "results": [version objects]}` ordered newest first (release date, then version).
+
+`GET /catalog/categories` returns `{"results": [{"id": "language", "package_count": 3}, ...]}` covering all schema categories (unpaginated; the list is small and stable).
 
 `GET /catalog/profiles/{profile_id}` returns the profile manifest (`schemas/profile.schema.json`).
 
@@ -72,7 +77,7 @@ All non-2xx responses use this envelope:
 }
 ```
 
-Codes: `PACKAGE_NOT_FOUND`, `PROFILE_NOT_FOUND`, `INVALID_ARGUMENT`, `NOT_IMPLEMENTED`, `RATE_LIMITED`, `INTERNAL_ERROR`.
+Codes: `NOT_FOUND` (unknown resource), `PACKAGE_NOT_FOUND`, `PROFILE_NOT_FOUND`, `INVALID_ARGUMENT`, `RATE_LIMITED`, `VALIDATION_FAILED`, `INTERNAL_ERROR`. Unmatched routes return `NOT_FOUND`.
 
 Never expose stack traces, secrets, internal storage paths, or unpublished package metadata.
 

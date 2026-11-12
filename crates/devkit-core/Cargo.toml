@@ -1,0 +1,15 @@
+[package]
+name = "devkit-core"
+description = "DevKit domain types, version policies, and shared error model"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+# Keep test-only dependencies minimal; no network access in unit tests.

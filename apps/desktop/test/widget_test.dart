@@ -1,0 +1,60 @@
+import 'package:devkit/app/app.dart';
+import 'package:devkit/core/widgets/empty_state.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  Widget buildApp() {
+    return const ProviderScope(child: DevKitApp());
+  }
+
+  testWidgets('app shell shows all six navigation destinations', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Explore'), findsOneWidget);
+    expect(find.text('Profiles'), findsOneWidget);
+    expect(find.text('Installed'), findsOneWidget);
+    expect(find.text('Downloads'), findsOneWidget);
+    expect(find.text('Settings'), findsOneWidget);
+  });
+
+  testWidgets('placeholder screens state they are Phase 1 work', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+    expect(find.text('Home — coming in Phase 1'), findsOneWidget);
+  });
+
+  testWidgets('navigating to Explore shows the Explore placeholder', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Explore'));
+    await tester.pumpAndSettle();
+    expect(find.text('Explore — coming in Phase 1'), findsOneWidget);
+  });
+
+  testWidgets('EmptyState renders title, message, and action', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: EmptyState(
+            title: 'No packages',
+            message: 'Search to get started.',
+            actionLabel: 'Browse',
+            onAction: () {},
+          ),
+        ),
+      ),
+    );
+    expect(find.text('No packages'), findsOneWidget);
+    expect(find.text('Search to get started.'), findsOneWidget);
+    expect(find.text('Browse'), findsOneWidget);
+  });
+}

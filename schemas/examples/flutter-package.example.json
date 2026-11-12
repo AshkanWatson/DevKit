@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "id": "devkit.framework.flutter",
+  "name": "Flutter",
+  "description": "Google's UI toolkit for building natively compiled applications for mobile, web, and desktop from a single codebase.",
+  "publisher": "Google",
+  "homepage": "https://flutter.dev/",
+  "category": "framework",
+  "supported_platforms": [
+    "windows-x64",
+    "macos-x64",
+    "macos-arm64",
+    "linux-x64"
+  ],
+  "default_version_policy": "stable",
+  "versions": [
+    {
+      "version": "3.27.1",
+      "channel": "stable",
+      "release_date": "2024-12-11",
+      "release_notes_url": "https://docs.flutter.dev/release-notes/release-notes-3.27.0",
+      "artifacts": [
+        {
+          "os": "windows",
+          "architecture": "x64",
+          "installer": "archive",
+          "url": "https://storage.example.invalid/flutter/flutter_windows_3.27.1-stable.zip",
+          "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+          "size_bytes": 1100000000,
+          "archive_root": "flutter",
+          "executable_relative_path": "bin/flutter.bat"
+        },
+        {
+          "os": "macos",
+          "architecture": "arm64",
+          "installer": "archive",
+          "url": "https://storage.example.invalid/flutter/flutter_macos_arm64_3.27.1-stable.zip",
+          "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+          "size_bytes": 1050000000,
+          "archive_root": "flutter",
+          "executable_relative_path": "bin/flutter"
+        }
+      ]
+    }
+  ],
+  "license_expression": "BSD-3-Clause",
+  "maintainer": "DevKit Catalog Team",
+  "updated_at": "2026-11-12T00:00:00Z"
+}

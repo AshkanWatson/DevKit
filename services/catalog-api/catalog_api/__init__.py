@@ -1,0 +1,1 @@
+"""Catalog API project package."""

@@ -1,0 +1,19 @@
+[workspace]
+resolver = "2"
+members = ["devkit-core"]
+
+# Phase 0 note: HANDOFF.md section 7 lists a recommended multi-crate layout.
+# Per the "avoid premature micro-crates" rule, Phase 0 scaffolds devkit-core
+# only. New crates are extracted when a module gains an independent boundary
+# (see ADR 0002 and docs/architecture/version-management.md).
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license-file = "../LICENSE"
+rust-version = "1.85"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"

@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs-and-schemas:
+    name: Docs and JSON schemas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate JSON schemas parse
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          for path in Path("schemas").glob("*.json"):
+              json.loads(path.read_text(encoding="utf-8"))
+              print(f"valid JSON: {path}")
+          PY
+
+  rust:
+    name: Rust checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: crates
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates
+      - name: Check workspace exists
+        run: |
+          if [ -f Cargo.toml ]; then
+            cargo fmt --all -- --check
+            cargo clippy --workspace --all-targets -- -D warnings
+            cargo test --workspace --all-targets
+          else
+            echo "Rust workspace not scaffolded yet; Phase 0 docs-only check."
+          fi
+
+  flutter:
+    name: Flutter checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Check Flutter project exists
+        run: |
+          if [ -f apps/desktop/pubspec.yaml ]; then
+            cd apps/desktop
+            flutter pub get
+            dart format --output=none --set-exit-if-changed .
+            flutter analyze
+            flutter test
+          else
+            echo "Flutter app not scaffolded yet; Phase 0 docs-only check."
+          fi
+
+  django:
+    name: Django checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: services/catalog-api/requirements.txt
+      - name: Check Django service exists
+        run: |
+          if [ -f services/catalog-api/manage.py ]; then
+            python -m pip install -r services/catalog-api/requirements.txt
+            cd services/catalog-api
+            python manage.py check
+            python manage.py test
+          else
+            echo "Django API not scaffolded yet; Phase 0 docs-only check."
+          fi

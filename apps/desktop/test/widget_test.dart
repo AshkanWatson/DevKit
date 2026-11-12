@@ -1,12 +1,14 @@
-import 'package:devkit/app/app.dart';
 import 'package:devkit/core/widgets/empty_state.dart';
+import 'package:devkit/main.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  // Pumps the real composition root (DevKitRoot) so a missing
+  // ProviderScope or equivalent composition error fails here, not in
+  // release builds as a white screen.
   Widget buildApp() {
-    return const ProviderScope(child: DevKitApp());
+    return const DevKitRoot();
   }
 
   testWidgets('app shell shows all six navigation destinations', (

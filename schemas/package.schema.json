@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devkit.example/schemas/package.schema.json",
+  "title": "DevKit Package Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "name",
+    "description",
+    "publisher",
+    "homepage",
+    "category",
+    "supported_platforms",
+    "versions",
+    "default_version_policy",
+    "updated_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(\\.[a-z0-9-]+)+$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "publisher": {
+      "type": "string",
+      "minLength": 1
+    },
+    "homepage": {
+      "type": "string",
+      "format": "uri"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "language",
+        "framework",
+        "sdk",
+        "ide",
+        "build_tool",
+        "database",
+        "utility",
+        "ai_tool",
+        "other"
+      ]
+    },
+    "supported_platforms": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "windows-x64",
+          "windows-arm64",
+          "macos-x64",
+          "macos-arm64",
+          "linux-x64",
+          "linux-arm64"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "default_version_policy": {
+      "type": "string",
+      "enum": [
+        "stable",
+        "latest",
+        "exact",
+        "channel"
+      ]
+    },
+    "versions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "channel",
+          "artifacts"
+        ],
+        "properties": {
+          "version": {
+            "type": "string",
+            "minLength": 1
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "stable",
+              "beta",
+              "dev",
+              "nightly"
+            ]
+          },
+          "release_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "release_notes_url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "artifacts": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "os",
+                "architecture",
+                "installer",
+                "url",
+                "sha256",
+                "size_bytes"
+              ],
+              "properties": {
+                "os": {
+                  "type": "string",
+                  "enum": [
+                    "windows",
+                    "macos",
+                    "linux"
+                  ]
+                },
+                "architecture": {
+                  "type": "string",
+                  "enum": [
+                    "x64",
+                    "arm64"
+                  ]
+                },
+                "installer": {
+                  "type": "string",
+                  "enum": [
+                    "archive",
+                    "exe",
+                    "msi",
+                    "dmg",
+                    "pkg",
+                    "appimage",
+                    "external_package_manager"
+                  ]
+                },
+                "url": {
+                  "type": "string",
+                  "format": "uri",
+                  "pattern": "^https://"
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[A-Fa-f0-9]{64}$"
+                },
+                "size_bytes": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "signature_url": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "publisher_identity": {
+                  "type": "string"
+                },
+                "archive_root": {
+                  "type": "string"
+                },
+                "executable_relative_path": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "license_expression": {
+      "type": "string"
+    },
+    "maintainer": {
+      "type": "string"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

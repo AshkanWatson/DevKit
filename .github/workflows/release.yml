@@ -1,0 +1,134 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Release preflight
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate version tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "Releasing version ${VERSION}"
+          test -n "$VERSION"
+
+  build-windows:
+    needs: preflight
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Build Windows release
+        shell: pwsh
+        run: |
+          if (!(Test-Path "apps/desktop/pubspec.yaml")) {
+            Write-Error "Flutter app has not been scaffolded. Release blocked."
+          }
+          cd apps/desktop
+          flutter pub get
+          flutter test
+          flutter build windows --release
+      - name: Package Windows output
+        shell: pwsh
+        run: |
+          $source = "apps/desktop/build/windows/x64/runner/Release"
+          if (!(Test-Path $source)) { $source = "apps/desktop/build/windows/runner/Release" }
+          if (!(Test-Path $source)) { Write-Error "Windows build output not found." }
+          Compress-Archive -Path "$source/*" -DestinationPath "DevKit-Windows-x64.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DevKit-Windows-x64
+          path: DevKit-Windows-x64.zip
+
+  build-macos:
+    needs: preflight
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Build macOS release
+        run: |
+          test -f apps/desktop/pubspec.yaml
+          cd apps/desktop
+          flutter pub get
+          flutter test
+          flutter build macos --release
+      - name: Package macOS app
+        run: |
+          APP_PATH="apps/desktop/build/macos/Build/Products/Release"
+          APP="$(find "$APP_PATH" -maxdepth 1 -name '*.app' -print -quit)"
+          test -n "$APP"
+          mkdir -p dist
+          hdiutil create -volname "DevKit" -srcfolder "$APP" -ov -format UDZO dist/DevKit-macOS.dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DevKit-macOS
+          path: dist/DevKit-macOS.dmg
+
+  build-linux:
+    needs: preflight
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev fuse
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Build Linux release
+        run: |
+          test -f apps/desktop/pubspec.yaml
+          cd apps/desktop
+          flutter pub get
+          flutter test
+          flutter build linux --release
+      - name: Package Linux build
+        run: |
+          mkdir -p dist
+          tar -czf dist/DevKit-Linux-x64.tar.gz -C apps/desktop/build/linux/x64/release/bundle .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DevKit-Linux-x64
+          path: dist/DevKit-Linux-x64.tar.gz
+
+  publish:
+    name: Publish GitHub Release
+    needs: [build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+      - name: Generate checksums
+        run: |
+          cd release-assets
+          sha256sum * > SHA256SUMS.txt
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release-assets/*
+          generate_release_notes: true

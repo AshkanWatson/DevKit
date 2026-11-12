@@ -3,3 +3,5 @@
 # CI installs exactly this file (see .github/workflows/ci.yml).
 Django>=6.0,<7.0
 djangorestframework>=3.16,<4.0
+# PostgreSQL driver for deployment (local dev/test use SQLite).
+psycopg[binary]>=3.2,<4.0

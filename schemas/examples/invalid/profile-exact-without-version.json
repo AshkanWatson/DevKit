@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "id": "devkit.profile.bad-exact-policy",
+  "name": "Negative fixture — exact policy without a pinned version",
+  "description": "Must fail: version_policy exact requires an explicit version.",
+  "packages": [
+    {
+      "package_id": "devkit.lang.python",
+      "required": true,
+      "version_policy": "exact"
+    }
+  ]
+}

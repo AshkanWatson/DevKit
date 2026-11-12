@@ -1,19 +1,26 @@
-"""Catalog API routes under /api/v1/ (docs/api/catalog-api.md).
-
-Endpoints marked "Phase 2" are part of the published contract; they respond
-with the documented error envelope (501 NOT_IMPLEMENTED) until implemented.
-"""
-from django.urls import path
+"""Catalog API routes under /api/v1/ (docs/api/catalog-api.md)."""
+from django.urls import include, path
+from rest_framework.routers import DefaultRouter
 
 from . import views
 
+# Contract paths have no trailing slash (docs/api/catalog-api.md).
+router = DefaultRouter(trailing_slash=False)
+router.register("catalog/packages", views.PackageViewSet, basename="packages")
+router.register("catalog/profiles", views.ProfileViewSet, basename="profiles")
+
 urlpatterns = [
     path("health", views.health, name="health"),
-    # Phase 2: catalog read endpoints.
-    path("catalog/packages", views.not_implemented, name="packages"),
-    path("catalog/packages/<str:package_id>", views.not_implemented, name="package-detail"),
-    path("catalog/packages/<str:package_id>/versions", views.not_implemented, name="package-versions"),
-    path("catalog/profiles", views.not_implemented, name="profiles"),
-    path("catalog/profiles/<str:profile_id>", views.not_implemented, name="profile-detail"),
-    path("catalog/categories", views.not_implemented, name="categories"),
+    path("catalog/categories", views.categories, name="categories"),
+    path(
+        "catalog/packages/<str:package_id>/versions",
+        views.package_versions,
+        name="package-versions",
+    ),
+    path(
+        "catalog/packages/<str:package_id>/manifest",
+        views.package_manifest_download,
+        name="package-manifest",
+    ),
+    path("", include(router.urls)),
 ]

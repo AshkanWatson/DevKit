@@ -17,8 +17,16 @@ dependencies:
 
   # Navigation (HANDOFF.md §8). GoRouter supports desktop deep links and
   # shell routes for the sidebar layout (DESIGN.md §2).
+  flutter_rust_bridge: ^2.13.0
   go_router: ^16.0.0
   material_ui: ^1.11.0
+
+  # NOTE: the Rust bridge (crates/devkit-bridge) is NOT wired as a pubspec
+  # plugin. It is included directly from windows/CMakeLists.txt (see the
+  # comment there): cargokit resolves the crate directory relatively, and
+  # Flutter's .plugin_symlinks junction breaks relative paths. The
+  # rust_builder/ folder stays in the repo for future platform support.
+  riverpod: 3.5.0
 
 dev_dependencies:
   flutter_test:

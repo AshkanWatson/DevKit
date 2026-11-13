@@ -52,6 +52,28 @@ jobs:
             echo "Rust workspace not scaffolded yet; Phase 0 docs-only check."
           fi
 
+  # Guards the FFI contract: generated Dart must match committed codegen
+  # output. A diff here means bridge code was hand-edited or codegen was not
+  # rerun after a Rust change (contracts update in the same commit).
+  codegen-drift:
+    name: Bridge codegen is up to date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates
+      - name: Install flutter_rust_bridge_codegen
+        run: cargo install flutter_rust_bridge_codegen@2.13.0 --locked
+      - name: Regenerate and diff
+        run: |
+          flutter_rust_bridge_codegen generate
+          git diff --exit-code -- crates/devkit-bridge apps/desktop/lib/core/bridge
+
   flutter:
     name: Flutter checks
     runs-on: ubuntu-latest
@@ -69,7 +91,9 @@ jobs:
           if [ -f apps/desktop/pubspec.yaml ]; then
             cd apps/desktop
             flutter pub get
-            dart format --output=none --set-exit-if-changed .
+            # Vendored cargokit code (rust_builder/cargokit) is third-party and
+            # excluded from formatting and analysis.
+            dart format --output=none --set-exit-if-changed lib test
             flutter analyze
             flutter test
           else

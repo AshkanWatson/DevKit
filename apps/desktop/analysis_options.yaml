@@ -15,6 +15,9 @@ analyzer:
     - windows/**
     - macos/**
     - linux/**
+    # Vendored third-party build tool (flutter_rust_bridge cargokit).
+    # It has its own pubspec, SDK constraints, and lint set.
+    - rust_builder/cargokit/**
 
 linter:
   # The lint rules applied to this project can be customized in the

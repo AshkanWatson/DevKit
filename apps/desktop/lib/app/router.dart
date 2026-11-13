@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/widgets/app_shell.dart';
 import '../core/widgets/placeholder_screen.dart';
+import '../features/home/home_screen.dart';
 
 /// Primary navigation destinations (DESIGN.md §2). The order defines the
 /// sidebar order and must stay in sync with AppShell.
@@ -15,7 +16,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(shell: shell),
         branches: [
-          for (final destination in AppDestination.values)
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/home',
+                builder: (context, state) => const HomeScreen(),
+              ),
+            ],
+          ),
+          for (final destination in AppDestination.values.skip(1))
             StatefulShellBranch(
               routes: [
                 GoRoute(

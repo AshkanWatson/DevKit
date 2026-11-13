@@ -48,6 +48,12 @@ jobs:
           channel: stable
           flutter-version: 3.47.8 # pinned, see ADR 0005
           cache: true
+      # cargokit (invoked by the Flutter Windows build) compiles the Rust
+      # bridge crate in-process and needs a Rust toolchain on the runner.
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates
       - name: Run Windows tests and capture output
         shell: pwsh
         run: |

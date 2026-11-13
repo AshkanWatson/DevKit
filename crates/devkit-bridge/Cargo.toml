@@ -1,0 +1,18 @@
+[package]
+name = "devkit_bridge"
+description = "FFI boundary between the Flutter desktop app and the Rust engine (flutter_rust_bridge v2)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+
+[lib]
+# cdylib is loaded by the Flutter desktop runner; staticlib keeps the option
+# open for future non-Dart embedders and exercises the same public API.
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[dependencies]
+devkit-core = { path = "../devkit-core" }
+# Pinned exactly per ADR 0002: the codegen binary and the runtime must match
+# (flutter_rust_bridge_codegen@2.13.0, pubspec flutter_rust_bridge 2.13.0).
+flutter_rust_bridge = "=2.13.0"

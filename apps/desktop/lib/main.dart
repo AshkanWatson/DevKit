@@ -1,6 +1,9 @@
 import 'package:devkit/app/app.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// `Override` lives in riverpod's "misc" public surface in Riverpod 3.x;
+// flutter_riverpod does not re-export it.
+import 'package:riverpod/misc.dart';
 
 void main() {
   // The ProviderScope must wrap the app root: DevKitApp is a Riverpod
@@ -12,11 +15,16 @@ void main() {
 
 /// The real composition root used by `main` and by tests, so tests verify
 /// the exact widget tree that ships.
+///
+/// [overrides] lets tests inject fakes for providers that touch real FFI
+/// (the bridge dynamic library is not loadable in the test environment).
 class DevKitRoot extends StatelessWidget {
-  const DevKitRoot({super.key});
+  const DevKitRoot({super.key, this.overrides = const []});
+
+  final List<Override> overrides;
 
   @override
   Widget build(BuildContext context) {
-    return const ProviderScope(child: DevKitApp());
+    return ProviderScope(overrides: overrides, child: const DevKitApp());
   }
 }

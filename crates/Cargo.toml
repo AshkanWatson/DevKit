@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["devkit-core"]
+members = ["devkit-core", "devkit-bridge"]
 
 # Phase 0 note: HANDOFF.md section 7 lists a recommended multi-crate layout.
 # Per the "avoid premature micro-crates" rule, Phase 0 scaffolds devkit-core

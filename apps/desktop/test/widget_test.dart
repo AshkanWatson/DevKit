@@ -1,3 +1,5 @@
+import 'package:devkit/core/bridge/api.dart';
+import 'package:devkit/core/bridge/bridge_providers.dart';
 import 'package:devkit/core/widgets/empty_state.dart';
 import 'package:devkit/main.dart';
 import 'package:material_ui/material_ui.dart';
@@ -7,8 +9,22 @@ void main() {
   // Pumps the real composition root (DevKitRoot) so a missing
   // ProviderScope or equivalent composition error fails here, not in
   // release builds as a white screen.
+  //
+  // The Rust bridge provider is overridden: the FFI dynamic library is not
+  // loadable in the plain test environment, and widget tests must never
+  // depend on it (repo rule: no real toolchain work in tests).
+  const fakeSystemInfo = SystemInfo(
+    os: 'windows',
+    arch: 'x86_64',
+    capabilities: ['sqlite_registry', 'catalog_client'],
+  );
+
   Widget buildApp() {
-    return const DevKitRoot();
+    return DevKitRoot(
+      overrides: [
+        systemInfoProvider.overrideWith((ref) => Future.value(fakeSystemInfo)),
+      ],
+    );
   }
 
   testWidgets('app shell shows all six navigation destinations', (
@@ -30,6 +46,15 @@ void main() {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
     expect(find.text('Home — coming in Phase 1'), findsOneWidget);
+  });
+
+  testWidgets('home shows the live Rust engine status from the bridge', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+    expect(find.text('Rust engine connected'), findsOneWidget);
+    expect(find.text('Engine windows/x86_64 · 2 capabilities'), findsOneWidget);
   });
 
   testWidgets('navigating to Explore shows the Explore placeholder', (

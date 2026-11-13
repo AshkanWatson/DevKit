@@ -57,6 +57,16 @@ add_subdirectory("runner")
 # them to the application.
 include(flutter/generated_plugins.cmake)
 
+# Rust engine bridge (crates/devkit-bridge, P1-02 / ADR 0002).
+#
+# Included directly instead of through Flutter's FFI-plugin mechanism:
+# cargokit receives the crate directory as a relative path, and Flutter
+# resolves plugin sources through build/.../.plugin_symlinks junctions where
+# relative "../.." paths stop matching the physical tree. This way
+# CMAKE_CURRENT_SOURCE_DIR is the real path.
+add_subdirectory(../rust_builder/windows plugins/devkit_bridge)
+list(APPEND PLUGIN_BUNDLED_LIBRARIES ${devkit_bridge_bundled_libraries})
+
 
 # === Installation ===
 # Support files are copied into place next to the executable, so that it can

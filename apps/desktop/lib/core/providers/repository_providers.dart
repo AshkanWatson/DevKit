@@ -22,9 +22,29 @@ final installedRepositoryProvider = Provider<InstalledRepository>(
 );
 
 /// Job center source (Dart simulator in Phase 1, `devkit-jobs` via FFI later).
-final jobsRepositoryProvider = Provider<JobsRepository>(
-  (ref) => FakeJobsRepository(),
-);
+///
+/// Wired to the installed registry: when a simulated install completes,
+/// the package is registered as a DevKit-managed active version, so the
+/// Installed destination reflects it immediately. (In the real engine the
+/// receipt write happens inside the Rust core, so the FFI provider default
+/// will not need this hook.)
+final jobsRepositoryProvider = Provider<JobsRepository>((ref) {
+  final installed = ref.watch(installedRepositoryProvider);
+  return FakeJobsRepository(
+    onInstallCompleted: (packageId, packageLabel, version) async {
+      if (installed case final FakeInstalledRepository fake) {
+        await fake.addManagedInstall(
+          packageId: packageId,
+          name: packageLabel,
+          version: version,
+        );
+        // Refresh the Installed read model so the new version shows up
+        // without a manual reload.
+        ref.invalidate(installedPackagesProvider);
+      }
+    },
+  );
+});
 
 /// All catalog packages.
 final catalogPackagesProvider = FutureProvider<List<CatalogPackage>>(

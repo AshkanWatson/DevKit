@@ -1,0 +1,21 @@
+[package]
+name = "devkit-install"
+version.workspace = true
+edition.workspace = true
+license-file.workspace = true
+rust-version.workspace = true
+description = "Installer adapter interface and the managed archive adapter (P3-02)"
+
+[dependencies]
+devkit-core = { path = "../devkit-core" }
+devkit-download = { path = "../devkit-download" }
+zip = { workspace = true }
+tar = { workspace = true }
+flate2 = { workspace = true }
+sha2 = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+proptest = { workspace = true }
+sha2 = { workspace = true }

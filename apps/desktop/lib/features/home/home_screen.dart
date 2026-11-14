@@ -1,10 +1,11 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/bridge/api.dart';
 import '../../core/bridge/bridge_providers.dart';
-import '../../core/widgets/empty_state.dart';
 import '../../app/theme/design_tokens.dart';
+import '../../core/providers/repository_providers.dart';
 
 /// Home destination (P1-02 milestone): shows the live Rust engine status —
 /// the first real bridge round trip — plus the Phase 1 roadmap placeholder.
@@ -28,13 +29,105 @@ class HomeScreen extends ConsumerWidget {
             data: (info) => _EngineStatusCard.data(info),
           ),
           const SizedBox(height: DesignTokens.space5),
-          const EmptyState(
-            title: 'Home — coming in Phase 1',
-            message:
-                'The dashboard with installed versions, downloads, and '
-                'profiles is built in Phase 1 (DESIGN.md §11).',
-          ),
+          const _SummarySection(),
         ],
+      ),
+    );
+  }
+}
+
+/// Home summary from the local fixture catalog and job center
+/// (DESIGN.md §4/§11: compact summary of installed packages and active
+/// jobs; empty state directs the user to Explore).
+class _SummarySection extends ConsumerWidget {
+  const _SummarySection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final installed = ref.watch(installedPackagesProvider);
+    final jobs = ref.watch(jobsProvider);
+
+    final installedCount = installed.value?.length ?? 0;
+    final activeJobs = jobs.value?.where((job) => job.isActive).length ?? 0;
+
+    return Wrap(
+      spacing: DesignTokens.space3,
+      runSpacing: DesignTokens.space3,
+      children: [
+        _SummaryCard(
+          title: '$installedCount',
+          subtitle: 'Installed packages',
+          icon: Icons.inventory_2_outlined,
+          onTap: () => context.go('/installed'),
+        ),
+        _SummaryCard(
+          title: '$activeJobs',
+          subtitle: 'Active jobs',
+          icon: Icons.downloading_outlined,
+          onTap: () => context.go('/downloads'),
+        ),
+        _SummaryCard(
+          title: 'Browse',
+          subtitle: 'Explore the catalog',
+          icon: Icons.explore_outlined,
+          onTap: () => context.go('/explore'),
+        ),
+      ],
+    );
+  }
+}
+
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: theme.colorScheme.outlineVariant),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(DesignTokens.space4),
+          child: SizedBox(
+            width: 180,
+            child: Row(
+              children: [
+                Icon(icon, color: theme.colorScheme.primary),
+                const SizedBox(width: DesignTokens.space3),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: theme.textTheme.titleLarge),
+                      Text(
+                        subtitle,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

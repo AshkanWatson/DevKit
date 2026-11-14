@@ -258,6 +258,38 @@ class FakeInstalledRepository implements InstalledRepository {
           package,
     ];
   }
+
+  /// Registers a completed (simulated) install as a DevKit-managed,
+  /// active version. The wired counterpart of the real engine recording
+  /// the install receipt in the SQLite registry (Phase 3 does this for
+  /// real, including PATH integration with explicit consent).
+  Future<void> addManagedInstall({
+    required String packageId,
+    required String name,
+    required String version,
+  }) async {
+    final shortId = packageId.split('.').last;
+    final location = 'devkit\\state\\packages\\$shortId\\$version';
+    final updated = InstalledPackage(
+      packageId: packageId,
+      name: name,
+      version: version,
+      status: InstalledStatus.installed,
+      isActive: true,
+      ownership: InstallOwnership.devkitManaged,
+      locationLabel: location,
+    );
+    _installed = [
+      updated,
+      // Keep other packages, and keep external (non-managed) entries for
+      // the same package; the managed entry is superseded by the new
+      // active version.
+      for (final package in _installed)
+        if (package.packageId != packageId ||
+            package.ownership != InstallOwnership.devkitManaged)
+          package,
+    ];
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -306,9 +338,20 @@ class _FakeJob {
 /// (terminal → ROLLING_BACK → ROLLED_BACK), and cancellation semantics all
 /// mirror `crates/devkit-jobs`.
 class FakeJobsRepository implements JobsRepository {
-  FakeJobsRepository() {
+  /// Optional hook invoked when a job reaches COMPLETED: the Phase 1
+  /// provider wiring uses it to register the managed install in the
+  /// installed registry (in the real engine this happens inside the same
+  /// Rust process, so the bridge needs no equivalent).
+  FakeJobsRepository({this.onInstallCompleted}) {
     _seedHistory();
   }
+
+  final Future<void> Function(
+    String packageId,
+    String packageLabel,
+    String version,
+  )?
+  onInstallCompleted;
 
   final List<_FakeJob> _jobs = [];
   final _changes = StreamController<List<JobInfo>>.broadcast();
@@ -397,7 +440,8 @@ class FakeJobsRepository implements JobsRepository {
       const _SimStep(
         JobStage.completed,
         null,
-        'Installation complete (simulated)',
+        'Installation complete (simulated) — registered in Installed; '
+        'PATH integration arrives with real installation (Phase 3)',
       ),
     ];
   }
@@ -420,7 +464,10 @@ class FakeJobsRepository implements JobsRepository {
       ..log.addAll(const [
         JobLogEntry(
           stage: JobStage.completed,
-          message: 'Installation complete (simulated)',
+          message:
+              'Installation complete (simulated) — registered in '
+              'Installed; PATH integration arrives with real '
+              'installation (Phase 3)',
         ),
       ]);
     final failed = _FakeJob(
@@ -518,6 +565,17 @@ class FakeJobsRepository implements JobsRepository {
     if (job.stage.isTerminal) {
       job.timer?.cancel();
       job.finished = true;
+      // Completed installs register in the installed registry (Phase 1
+      // simulator wiring; the real engine records the receipt itself).
+      if (job.stage == JobStage.completed && onInstallCompleted != null) {
+        unawaited(
+          onInstallCompleted!(
+            job.packageId,
+            job.packageLabel,
+            job.version,
+          ),
+        );
+      }
     }
     _emit();
   }

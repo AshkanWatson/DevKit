@@ -1,0 +1,18 @@
+[package]
+name = "devkit-download"
+version.workspace = true
+edition.workspace = true
+license-file.workspace = true
+rust-version.workspace = true
+description = "HTTPS-only artifact download and SHA-256 verification (P3-01)"
+
+[dependencies]
+reqwest = { workspace = true }
+sha2 = { workspace = true }
+bytes = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+tempfile = { workspace = true }
+tiny_http = { workspace = true }

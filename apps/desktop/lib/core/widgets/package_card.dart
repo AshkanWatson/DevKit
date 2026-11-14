@@ -110,7 +110,8 @@ class PackageCard extends StatelessWidget {
   }
 }
 
-/// Small category label used inside cards.
+/// Small category label used inside cards: icon + label, so the category
+/// is recognizable by icon as well as text.
 class _CategoryBadge extends StatelessWidget {
   const _CategoryBadge({required this.category});
 
@@ -128,21 +129,45 @@ class _CategoryBadge extends StatelessWidget {
         color: theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(category.label, style: theme.textTheme.labelSmall),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(category.icon, size: 12, color: theme.colorScheme.primary),
+          const SizedBox(width: 4),
+          Text(category.label, style: theme.textTheme.labelSmall),
+        ],
+      ),
     );
   }
 }
 
-/// Category filter chip (DESIGN.md §4 Explore).
+/// Icon per catalog category (user feedback: categories must be
+/// recognizable by icon, not only by text label). All icons are standard
+/// Material symbols so they exist on every Flutter version we pin.
+extension PackageCategoryIcon on PackageCategory {
+  IconData get icon => switch (this) {
+    PackageCategory.language => Icons.terminal,
+    PackageCategory.framework => Icons.widgets_outlined,
+    PackageCategory.sdk => Icons.inventory_2_outlined,
+    PackageCategory.ide => Icons.desktop_windows_outlined,
+    PackageCategory.buildTool => Icons.construction,
+    PackageCategory.database => Icons.storage,
+    PackageCategory.utility => Icons.handyman_outlined,
+    PackageCategory.aiTool => Icons.auto_awesome,
+    PackageCategory.other => Icons.category_outlined,
+  };
+}
+
+/// Category filter chip (DESIGN.md §4 Explore): icon + label.
 class CategoryChip extends StatelessWidget {
   const CategoryChip({
     super.key,
-    required this.label,
+    required this.category,
     required this.selected,
     this.onSelected,
   });
 
-  final String label;
+  final PackageCategory category;
   final bool selected;
   final VoidCallback? onSelected;
 
@@ -151,7 +176,8 @@ class CategoryChip extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(right: DesignTokens.space2),
       child: FilterChip(
-        label: Text(label),
+        avatar: Icon(category.icon, size: 18),
+        label: Text(category.label),
         selected: selected,
         onSelected: onSelected == null ? null : (_) => onSelected!(),
         showCheckmark: false,

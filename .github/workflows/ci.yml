@@ -61,16 +61,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: dart-lang/setup-dart@v1
+      # FRB codegen detects a Flutter project (apps/desktop/pubspec.yaml
+      # declares a `flutter` dependency) and therefore requires the full
+      # Flutter toolchain, not Dart alone: it runs `flutter --version` and
+      # `flutter pub get` (dart_toolchain.rs `DartToolchain::available()`).
+      # A Dart-only environment makes the codegen binary abort (exit 101).
+      - uses: subosito/flutter-action@v2
         with:
-          sdk: stable
+          channel: stable
+          # Same pinned version as the flutter job (ADR 0005).
+          flutter-version: 3.47.8
+          cache: true
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: crates
       - name: Install flutter_rust_bridge_codegen
         run: cargo install flutter_rust_bridge_codegen@2.13.0 --locked
       - name: Regenerate and diff
+        env:
+          # Print a backtrace if the codegen binary still panics.
+          RUST_BACKTRACE: 1
         run: |
+          (cd apps/desktop && flutter pub get)
           flutter_rust_bridge_codegen generate
           git diff --exit-code -- crates/devkit-bridge apps/desktop/lib/core/bridge
 

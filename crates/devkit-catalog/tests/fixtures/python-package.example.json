@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "id": "devkit.lang.python",
+  "name": "Python",
+  "description": "Python programming language runtime.",
+  "publisher": "Python Software Foundation",
+  "homepage": "https://www.python.org/",
+  "category": "language",
+  "supported_platforms": [
+    "windows-x64",
+    "macos-arm64",
+    "linux-x64"
+  ],
+  "default_version_policy": "stable",
+  "versions": [
+    {
+      "version": "3.12.7",
+      "channel": "stable",
+      "release_date": "2024-10-01",
+      "artifacts": [
+        {
+          "os": "windows",
+          "architecture": "x64",
+          "installer": "exe",
+          "url": "https://example.invalid/python-3.12.7-amd64.exe",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "size_bytes": 30000000
+        }
+      ]
+    }
+  ],
+  "license_expression": "PSF-2.0",
+  "maintainer": "DevKit Catalog Team",
+  "updated_at": "2026-11-12T00:00:00Z"
+}

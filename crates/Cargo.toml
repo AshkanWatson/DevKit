@@ -1,11 +1,13 @@
 [workspace]
 resolver = "2"
-members = ["devkit-core", "devkit-bridge"]
+members = ["devkit-core", "devkit-bridge", "devkit-registry", "devkit-catalog", "devkit-jobs"]
 
 # Phase 0 note: HANDOFF.md section 7 lists a recommended multi-crate layout.
 # Per the "avoid premature micro-crates" rule, Phase 0 scaffolds devkit-core
 # only. New crates are extracted when a module gains an independent boundary
-# (see ADR 0002 and docs/architecture/version-management.md).
+# (see ADR 0002 and docs/architecture/version-management.md). devkit-registry
+# and devkit-catalog follow the documented split (HANDOFF.md §7,
+# docs/architecture/local-database.md §3: migrations live in devkit-registry).
 
 [workspace.package]
 version = "0.1.0"
@@ -17,3 +19,14 @@ rust-version = "1.85"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
+rusqlite = { version = "0.42", features = ["bundled"] }
+time = { version = "0.3", features = ["formatting"] }
+tempfile = "3"
+uuid = { version = "1", features = ["v4"] }
+# ADR 0002: reqwest over rustls (no OpenSSL), HTTPS-only policy enforced by
+# the client. Used by the remote catalog client (P2-04) and, later, the
+# download engine (Phase 3).
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+# Test runtime for async engine code (macrotasks); production async runs on
+# the bridge's executor.
+tokio = { version = "1", features = ["macros", "rt"] }

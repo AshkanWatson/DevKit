@@ -21,6 +21,11 @@ dependencies:
   go_router: ^16.0.0
   material_ui: ^1.11.0
 
+  # UI-level settings persistence only (theme mode, P1-07). All DevKit
+  # state (catalog cache, registry, jobs) lives in the Rust-managed
+  # SQLite database, never in this plugin's store.
+  shared_preferences: ^2.5.0
+
   # NOTE: the Rust bridge (crates/devkit-bridge) is NOT wired as a pubspec
   # plugin. It is included directly from windows/CMakeLists.txt (see the
   # comment there): cargokit resolves the crate directory relatively, and
@@ -31,6 +36,9 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
+  # Timer-free testing of the fake job simulator (test/screens_test.dart).
+  fake_async: ^1.3.0
 
   flutter_lints: ^6.0.0
 

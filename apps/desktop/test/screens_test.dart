@@ -79,16 +79,34 @@ void main() {
       await tester.pumpAndSettle();
       await goTo(tester, Icons.explore_outlined);
 
-      await tester.tap(find.widgetWithText(FilterChip, 'Utilities'));
+      // No "All" chip: the first category (Languages) is active by
+      // default, and its first card is built into the lazy list.
+      expect(find.text('Go'), findsOneWidget);
+      expect(find.text('Git'), findsNothing);
+
+      final utilitiesChip = find.widgetWithText(FilterChip, 'Utilities');
+      await tester.ensureVisible(utilitiesChip);
+      await tester.pumpAndSettle();
+      await tester.tap(utilitiesChip);
       await tester.pumpAndSettle();
 
       expect(find.text('Git'), findsOneWidget);
       expect(find.text('Docker Engine'), findsOneWidget);
       expect(find.text('Python'), findsNothing);
 
-      // "All" restores the full catalog.
-      await tester.tap(find.widgetWithText(FilterChip, 'All'));
+      // Switching back to Languages restores its packages.
+      final languagesChip = find.widgetWithText(FilterChip, 'Languages');
+      await tester.ensureVisible(languagesChip);
       await tester.pumpAndSettle();
+      await tester.tap(languagesChip);
+      await tester.pumpAndSettle();
+      // Python sits below the fold in the longer language list; drag the
+      // package list (not the chips row) until the lazy child is built.
+      await tester.dragUntilVisible(
+        find.text('Python'),
+        find.byType(ListView).first,
+        const Offset(0, -200),
+      );
       expect(find.text('Python'), findsOneWidget);
     });
 
@@ -131,7 +149,9 @@ void main() {
 
       await delayed.release();
       await tester.pumpAndSettle();
-      expect(find.text('Python'), findsOneWidget);
+      // The first category (Languages) is active by default; its first
+      // card is built into the lazy list.
+      expect(find.text('Go'), findsOneWidget);
     });
 
     testWidgets('catalog load failure shows an error state with retry', (
@@ -161,6 +181,13 @@ void main() {
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
       await goTo(tester, Icons.explore_outlined);
+
+      // Docker is in Utilities; no "All" chip, so pick that category.
+      final utilitiesChip = find.widgetWithText(FilterChip, 'Utilities');
+      await tester.ensureVisible(utilitiesChip);
+      await tester.pumpAndSettle();
+      await tester.tap(utilitiesChip);
+      await tester.pumpAndSettle();
 
       final dockerCard = find.text('Docker Engine');
       await tester.ensureVisible(dockerCard);
@@ -193,6 +220,13 @@ void main() {
       await tester.pumpAndSettle();
       await goTo(tester, Icons.explore_outlined);
 
+      // Docker is in Utilities; no "All" chip, so pick that category.
+      final utilitiesChip = find.widgetWithText(FilterChip, 'Utilities');
+      await tester.ensureVisible(utilitiesChip);
+      await tester.pumpAndSettle();
+      await tester.tap(utilitiesChip);
+      await tester.pumpAndSettle();
+
       final dockerCard = find.text('Docker Engine');
       await tester.ensureVisible(dockerCard);
       await tester.pumpAndSettle();
@@ -213,6 +247,14 @@ void main() {
       await tester.pumpAndSettle();
       await goTo(tester, Icons.explore_outlined);
 
+      // Python sits below the fold in the longer language list; drag the
+      // package list (not the chips row) until the lazy child is built.
+      await tester.dragUntilVisible(
+        find.text('Python'),
+        find.byType(ListView).first,
+        const Offset(0, -200),
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Python'));
       await tester.pumpAndSettle();
 
@@ -236,6 +278,13 @@ void main() {
       );
       await tester.pumpAndSettle();
       await goTo(tester, Icons.explore_outlined);
+
+      // Flutter is in Frameworks; no "All" chip, so pick that category.
+      final frameworksChip = find.widgetWithText(FilterChip, 'Frameworks');
+      await tester.ensureVisible(frameworksChip);
+      await tester.pumpAndSettle();
+      await tester.tap(frameworksChip);
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Flutter'));
       await tester.pumpAndSettle();
@@ -626,6 +675,82 @@ void main() {
         jobs.cancelJob(id!);
         jobs.debugAdvanceOnce();
         expect(snapshot().stage, JobStage.completed);
+      });
+    });
+
+    test('a completed simulated install registers in the installed registry', () {
+      fakeAsync((async) {
+        final installed = FakeInstalledRepository();
+        final jobs = FakeJobsRepository(
+          // Mirrors the repository_providers.dart wiring.
+          onInstallCompleted: (packageId, packageLabel, version) async {
+            await installed.addManagedInstall(
+              packageId: packageId,
+              name: packageLabel,
+              version: version,
+            );
+          },
+        );
+        String? id;
+        jobs
+            .startInstall(
+              packageId: 'devkit.lang.nodejs',
+              packageLabel: 'Node.js',
+              version: '22.12.0',
+            )
+            .then((value) => id = value);
+        async.flushMicrotasks();
+
+        // Walk the job to the terminal state.
+        late JobInfo job;
+        JobInfo snapshot() {
+          jobs.jobs().then(
+            (value) => job = value.singleWhere((j) => j.id == id),
+          );
+          async.flushMicrotasks();
+          return job;
+        }
+
+        var ticks = 0;
+        while (!snapshot().stage.isTerminal && ticks < 20) {
+          jobs.debugAdvanceOnce();
+          ticks++;
+        }
+        expect(job.stage, JobStage.completed);
+        async.flushMicrotasks();
+
+        // The installed registry now lists the new managed, active
+        // version (user feedback: installing must visibly "work").
+        late List<InstalledPackage> registered;
+        installed.installed().then((value) => registered = value);
+        async.flushMicrotasks();
+        final node = registered.singleWhere(
+          (p) => p.packageId == 'devkit.lang.nodejs',
+        );
+        expect(node.version, '22.12.0');
+        expect(node.status, InstalledStatus.installed);
+        expect(node.isActive, isTrue);
+        expect(node.ownership, InstallOwnership.devkitManaged);
+        expect(node.locationLabel, contains('nodejs'));
+
+        // A managed re-install supersedes the seeded entry instead of
+        // duplicating it, and external entries are untouched.
+        installed.addManagedInstall(
+          packageId: 'devkit.lang.python',
+          name: 'Python',
+          version: '3.13.1',
+        );
+        installed.installed().then((value) => registered = value);
+        async.flushMicrotasks();
+        final pythons = registered.where(
+          (p) => p.packageId == 'devkit.lang.python',
+        );
+        expect(pythons, hasLength(1));
+        expect(pythons.single.version, '3.13.1');
+        final vscode = registered.singleWhere(
+          (p) => p.packageId == 'devkit.ide.vscode',
+        );
+        expect(vscode.ownership, InstallOwnership.externalDetected);
       });
     });
   });

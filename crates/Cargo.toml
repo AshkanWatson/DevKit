@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["devkit-core", "devkit-bridge", "devkit-registry", "devkit-catalog", "devkit-jobs"]
+members = ["devkit-core", "devkit-bridge", "devkit-registry", "devkit-catalog", "devkit-jobs", "devkit-download", "devkit-install"]
 
 # Phase 0 note: HANDOFF.md section 7 lists a recommended multi-crate layout.
 # Per the "avoid premature micro-crates" rule, Phase 0 scaffolds devkit-core
@@ -28,5 +28,20 @@ uuid = { version = "1", features = ["v4"] }
 # download engine (Phase 3).
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 # Test runtime for async engine code (macrotasks); production async runs on
-# the bridge's executor.
-tokio = { version = "1", features = ["macros", "rt"] }
+# the bridge's executor. "time" supports deterministic cancellation-timing
+# sleeps in the P3-01 download tests.
+tokio = { version = "1", features = ["macros", "rt", "time"] }
+# P3-01: SHA-256 verification of downloaded artifacts (security model §4).
+sha2 = "0.10"
+# P3-01: chunk type for streamed download bodies.
+bytes = "1"
+# P3-01 tests: local fixture HTTP server (testing-strategy.md - download
+# tests never touch real vendor hosts).
+tiny_http = "0.12"
+# P3-02 archive adapter: managed ZIP and TAR(+gzip) extraction.
+zip = { version = "2", default-features = false, features = ["deflate"] }
+tar = "0.4"
+flate2 = "1"
+# P3-02 tests: property-style entry-path validation (testing-strategy.md
+# "Property/fuzz" row).
+proptest = "1"

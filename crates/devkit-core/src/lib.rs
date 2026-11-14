@@ -4,10 +4,15 @@
 //! - [`version`]: version policies and selection semantics (HANDOFF.md §5).
 //! - [`error`]: the stable error-code model shared with the FFI contract
 //!   (docs/ffi/bridge-contract.md).
+//! - [`manifest`]: package/profile manifest parsing and validation (P1-03).
 //!
 //! This crate must stay free of network, filesystem, and process access.
 //! Those capabilities live in dedicated crates in later phases so that
 //! security-sensitive behavior is isolated and reviewable.
+//!
+//! Exception to the last rule: `manifest` unit tests read the committed
+//! schema fixtures under `schemas/examples/` (test-only filesystem access).
 
 pub mod error;
+pub mod manifest;
 pub mod version;

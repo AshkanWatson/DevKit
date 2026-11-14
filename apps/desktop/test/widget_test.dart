@@ -27,6 +27,13 @@ void main() {
     );
   }
 
+  /// The NavigationRail shows the same icons as body content on some
+  /// screens; scope nav taps to the rail so finders stay unambiguous.
+  Finder railIcon(IconData icon) => find.descendant(
+    of: find.byType(NavigationRail),
+    matching: find.byIcon(icon),
+  );
+
   testWidgets('app shell shows all six navigation destinations', (
     tester,
   ) async {
@@ -40,12 +47,16 @@ void main() {
     expect(find.text('Settings'), findsOneWidget);
   });
 
-  testWidgets('placeholder screens state they are Phase 1 work', (
+  testWidgets('settings shows appearance, storage, and diagnostics sections', (
     tester,
   ) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
-    expect(find.text('Home — coming in Phase 1'), findsOneWidget);
+    await tester.tap(railIcon(Icons.settings_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text('Appearance'), findsOneWidget);
+    expect(find.text('Storage'), findsOneWidget);
+    expect(find.text('Diagnostics'), findsOneWidget);
   });
 
   testWidgets('home shows the live Rust engine status from the bridge', (
@@ -57,14 +68,58 @@ void main() {
     expect(find.text('Engine windows/x86_64 · 2 capabilities'), findsOneWidget);
   });
 
-  testWidgets('navigating to Explore shows the Explore placeholder', (
+  testWidgets('home shows a fixture-data summary linking to destinations', (
     tester,
   ) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Explore'));
+    expect(find.text('Installed packages'), findsOneWidget);
+    expect(find.text('Active jobs'), findsOneWidget);
+  });
+
+  testWidgets('navigating to Explore shows the fixture catalog', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
-    expect(find.text('Explore — coming in Phase 1'), findsOneWidget);
+    await tester.tap(railIcon(Icons.explore_outlined));
+    await tester.pumpAndSettle();
+    expect(find.text('Python'), findsOneWidget);
+    expect(find.text('Flutter'), findsOneWidget);
+  });
+
+  testWidgets('responsive layout: drawer below 700px, compact rail at '
+      '700–1100px, extended rail above 1100px', (tester) async {
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    // Narrow: navigation drawer with an app bar, single column. The
+    // closed drawer is not built until opened, so assert the app bar and
+    // the absence of a persistent rail.
+    tester.view.physicalSize = const Size(640, 800);
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+    expect(find.byType(AppBar), findsOneWidget);
+    expect(find.byType(NavigationRail), findsNothing);
+
+    // Medium: persistent rail, compact (icons only, not extended).
+    tester.view.physicalSize = const Size(900, 700);
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+    expect(find.byType(AppBar), findsNothing);
+    expect(
+      tester.widget<NavigationRail>(find.byType(NavigationRail)).extended,
+      isFalse,
+    );
+
+    // Wide: persistent extended rail.
+    tester.view.physicalSize = const Size(1280, 800);
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<NavigationRail>(find.byType(NavigationRail)).extended,
+      isTrue,
+    );
   });
 
   testWidgets('EmptyState renders title, message, and action', (tester) async {

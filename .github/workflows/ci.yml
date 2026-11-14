@@ -136,8 +136,41 @@ jobs:
   # Phase 1 definition of done (docs/phases/PHASE_1.md § Definition of done):
   # "flutter analyze + flutter test and cargo clippy/test pass on all
   # platforms in CI" and "CI smoke on macOS". The ubuntu jobs above cover
-  # Linux; this job repeats the same checks on macOS. It is not the
-  # packaging pipeline (release.yml) — no builds or installers here.
+  # Linux piecemeal; the two smoke jobs below repeat the SAME combined
+  # checks (Rust + Flutter in one runner) on Linux and macOS so
+  # OS-specific behavior (filesystem, fixtures, archive handling) is
+  # verified per platform. They are not the packaging pipeline
+  # (release.yml) — no builds or installers here.
+  linux-smoke:
+    name: Linux smoke (Rust + Flutter checks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.8
+          cache: true
+      - name: Rust checks
+        working-directory: crates
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --workspace --all-targets -- -D warnings
+          cargo test --workspace --all-targets
+      - name: Flutter checks
+        working-directory: apps/desktop
+        run: |
+          flutter pub get
+          dart format --output=none --set-exit-if-changed lib test
+          flutter analyze
+          flutter test
+
   macos-smoke:
     name: macOS smoke (Rust + Flutter checks)
     runs-on: macos-latest

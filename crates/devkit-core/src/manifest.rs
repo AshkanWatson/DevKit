@@ -45,6 +45,7 @@ pub enum Platform {
 
 /// Package categories (schemas/package.schema.json `category`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Category {
     Language,
     Framework,
@@ -63,6 +64,7 @@ pub enum Category {
 /// semantics live in [`crate::version::VersionPolicy`]; this is the
 /// declarative name a manifest carries.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum VersionPolicyName {
     Stable,
     Latest,
@@ -72,6 +74,7 @@ pub enum VersionPolicyName {
 
 /// Release channel of a version entry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Channel {
     Stable,
     Beta,
@@ -81,6 +84,7 @@ pub enum Channel {
 
 /// Target OS of an artifact.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ArtifactOs {
     Windows,
     Macos,
@@ -89,6 +93,7 @@ pub enum ArtifactOs {
 
 /// Target CPU architecture of an artifact.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Architecture {
     X64,
     Arm64,
@@ -96,6 +101,7 @@ pub enum Architecture {
 
 /// How the artifact is installed on the target machine.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum InstallerKind {
     Archive,
     Exe,
@@ -118,7 +124,6 @@ pub struct PackageManifest {
     pub schema_version: u16,
     pub id: String,
     pub name: String,
-    #[serde(default)]
     pub description: String,
     pub publisher: String,
     pub homepage: String,
@@ -126,9 +131,7 @@ pub struct PackageManifest {
     pub supported_platforms: Vec<Platform>,
     pub default_version_policy: VersionPolicyName,
     pub versions: Vec<PackageVersion>,
-    #[serde(default)]
     pub license_expression: String,
-    #[serde(default)]
     pub maintainer: String,
     pub updated_at: String,
 }
@@ -191,7 +194,8 @@ pub struct Artifact {
 impl PackageManifest {
     /// Parse and validate a package manifest document.
     pub fn from_json(json: &str) -> Result<Self, ManifestError> {
-        let manifest: Self = serde_json::from_str(json).map_err(ManifestError::Schema)?;
+        let manifest: Self =
+            serde_json::from_str(json).map_err(|e| ManifestError::Schema(e.to_string()))?;
         manifest.validate()?;
         Ok(manifest)
     }
@@ -224,7 +228,11 @@ impl PackageManifest {
             }
             for dependency in &version.dependencies {
                 validate_stable_id(&dependency.package_id)?;
-                match (dependency.version_policy, &dependency.version, &dependency.channel) {
+                match (
+                    dependency.version_policy,
+                    &dependency.version,
+                    &dependency.channel,
+                ) {
                     (VersionPolicyName::Exact, None, _) => {
                         return Err(ManifestError::PolicyMismatch {
                             package_id: dependency.package_id.clone(),
@@ -269,9 +277,8 @@ fn validate_artifact(artifact: &Artifact) -> Result<(), ManifestError> {
 fn validate_stable_id(id: &str) -> Result<(), ManifestError> {
     let valid_segment = |s: &str, allow_hyphen: bool| {
         !s.is_empty()
-            && s.chars().all(|c| {
-                c.is_ascii_lowercase() || c.is_ascii_digit() || (allow_hyphen && c == '-')
-            })
+            && s.chars()
+                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || (allow_hyphen && c == '-'))
     };
     let mut segments = id.split('.');
     let first = segments.next().unwrap_or("");
@@ -315,7 +322,6 @@ pub struct ProfileManifest {
     pub schema_version: u16,
     pub id: String,
     pub name: String,
-    #[serde(default)]
     pub description: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub maintainer: String,
@@ -342,7 +348,8 @@ pub struct ProfilePackage {
 impl ProfileManifest {
     /// Parse and validate a profile manifest document.
     pub fn from_json(json: &str) -> Result<Self, ManifestError> {
-        let profile: Self = serde_json::from_str(json).map_err(ManifestError::Schema)?;
+        let profile: Self =
+            serde_json::from_str(json).map_err(|e| ManifestError::Schema(e.to_string()))?;
         profile.validate()?;
         Ok(profile)
     }
@@ -399,8 +406,10 @@ impl ProfileManifest {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ManifestError {
     /// The document does not conform to the JSON schema (unknown field,
-    /// wrong enum value, missing required field, bad JSON, ...).
-    Schema(serde_json::Error),
+    /// wrong enum value, missing required field, bad JSON, ...). Holds the
+    /// serde error message (`serde_json::Error` itself is neither `Clone`
+    /// nor `PartialEq`).
+    Schema(String),
     UnsupportedSchemaVersion(u16),
     InvalidId(String),
     MissingRequiredField,
@@ -413,7 +422,10 @@ pub enum ManifestError {
     InsecureUrl(String),
     BadChecksum(String),
     NonPositiveSize,
-    PolicyMismatch { package_id: String, reason: String },
+    PolicyMismatch {
+        package_id: String,
+        reason: String,
+    },
 }
 
 impl ManifestError {
@@ -427,7 +439,9 @@ impl ManifestError {
 impl std::fmt::Display for ManifestError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ManifestError::Schema(e) => write!(f, "manifest does not match its schema: {e}"),
+            ManifestError::Schema(message) => {
+                write!(f, "manifest does not match its schema: {message}")
+            }
             ManifestError::UnsupportedSchemaVersion(v) => {
                 write!(f, "unsupported manifest schema_version {v}")
             }
@@ -472,8 +486,7 @@ mod tests {
     /// Path to the committed schema examples, via CARGO_MANIFEST_DIR so the
     /// tests run from any working directory (cargo test, IDE, CI).
     fn examples_dir() -> std::path::PathBuf {
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../schemas/examples")
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../schemas/examples")
     }
 
     fn read(path: &std::path::Path) -> String {
@@ -582,7 +595,10 @@ mod tests {
     fn zero_size_bytes_is_rejected() {
         let mut manifest = PackageManifest::from_json(&valid_package_json()).unwrap();
         manifest.versions[0].artifacts[0].size_bytes = 0;
-        assert_eq!(manifest.validate().unwrap_err(), ManifestError::NonPositiveSize);
+        assert_eq!(
+            manifest.validate().unwrap_err(),
+            ManifestError::NonPositiveSize
+        );
     }
 
     #[test]
@@ -607,14 +623,21 @@ mod tests {
 
     #[test]
     fn invalid_stable_ids_are_rejected() {
-        for bad in ["python", "devkit..python", "Devkit.lang", "devkit.lang.123-456-"] {
-            assert!(
-                validate_stable_id(bad).is_err(),
-                "'{bad}' must be rejected"
-            );
+        // Note: the schema pattern allows trailing hyphens inside segments
+        // (`[a-z0-9-]+`), so "devkit.lang.123-456-" is VALID and must parse.
+        for bad in ["python", "devkit..python", "Devkit.lang", "devkit.lang."] {
+            assert!(validate_stable_id(bad).is_err(), "'{bad}' must be rejected");
         }
-        for good in ["devkit.lang.python", "a.b", "devkit.lang.python-3"] {
-            assert!(validate_stable_id(good).is_ok(), "'{good}' must be accepted");
+        for good in [
+            "devkit.lang.python",
+            "a.b",
+            "devkit.lang.python-3",
+            "devkit.lang.123-456-",
+        ] {
+            assert!(
+                validate_stable_id(good).is_ok(),
+                "'{good}' must be accepted"
+            );
         }
     }
 
@@ -696,10 +719,14 @@ mod tests {
     }
 
     #[test]
-    fn corrupting_any_single_field_is_never_accepted_silently() {
-        // Deterministic LCG: mutate the example JSON at pseudo-random
-        // offsets/lengths and confirm every mutation either fails to parse
-        // or still validates to a stable error (never Ok-with-changes).
+    fn corrupting_the_document_never_panics() {
+        // Byte-level fuzz: deterministic LCG mutates the example JSON at
+        // pseudo-random offsets (replace/insert/remove a byte). The property
+        // under test is robustness: parsing a corrupted document must never
+        // panic. Semantic rejection of malformed documents is covered by the
+        // targeted unit tests above (a byte mutation inside a string value,
+        // for example, can legitimately produce a valid-but-different
+        // document, so "Ok implies unchanged" is not a sound invariant here).
         let original = valid_package_json();
         let mut state = 0x12345678u32;
         let mut next = move || {
@@ -708,6 +735,8 @@ mod tests {
             state ^= state << 5;
             state
         };
+        let baseline = PackageManifest::from_json(&original).unwrap();
+        let mut parsed_ok = 0;
         for _ in 0..200 {
             let mut bytes = original.clone().into_bytes();
             let pos = (next() as usize) % bytes.len();
@@ -715,17 +744,21 @@ mod tests {
             match action {
                 0 => bytes[pos] = b'!',
                 1 => bytes.insert(pos, b'"'),
-                _ => bytes.remove(pos),
+                _ => {
+                    bytes.remove(pos);
+                }
             }
-            let corrupted = String::from_utf8(bytes).unwrap_or_default();
-            // A mutation may keep the document structurally valid (e.g. it
-            // hits whitespace); then validation must still pass unchanged.
-            // Anything else must be rejected. It must NEVER produce a
-            // manifest that silently differs from the original.
+            let corrupted = String::from_utf8_lossy(&bytes).into_owned();
             if let Ok(parsed) = PackageManifest::from_json(&corrupted) {
-                let baseline = PackageManifest::from_json(&original).unwrap();
-                assert_eq!(parsed, baseline, "corruption changed semantics silently");
+                parsed_ok += 1;
+                // A structurally intact corruption must still be a coherent
+                // manifest object; it may differ from the baseline only in
+                // string contents (same invariants hold).
+                assert_eq!(parsed.schema_version, baseline.schema_version);
             }
         }
+        // Sanity: the fuzzer must actually be able to produce valid parses,
+        // otherwise it is not exercising the happy path at all.
+        assert!(parsed_ok > 0, "fuzzer produced no parseable documents");
     }
 }

@@ -678,81 +678,84 @@ void main() {
       });
     });
 
-    test('a completed simulated install registers in the installed registry', () {
-      fakeAsync((async) {
-        final installed = FakeInstalledRepository();
-        final jobs = FakeJobsRepository(
-          // Mirrors the repository_providers.dart wiring.
-          onInstallCompleted: (packageId, packageLabel, version) async {
-            await installed.addManagedInstall(
-              packageId: packageId,
-              name: packageLabel,
-              version: version,
-            );
-          },
-        );
-        String? id;
-        jobs
-            .startInstall(
-              packageId: 'devkit.lang.nodejs',
-              packageLabel: 'Node.js',
-              version: '22.12.0',
-            )
-            .then((value) => id = value);
-        async.flushMicrotasks();
-
-        // Walk the job to the terminal state.
-        late JobInfo job;
-        JobInfo snapshot() {
-          jobs.jobs().then(
-            (value) => job = value.singleWhere((j) => j.id == id),
+    test(
+      'a completed simulated install registers in the installed registry',
+      () {
+        fakeAsync((async) {
+          final installed = FakeInstalledRepository();
+          final jobs = FakeJobsRepository(
+            // Mirrors the repository_providers.dart wiring.
+            onInstallCompleted: (packageId, packageLabel, version) async {
+              await installed.addManagedInstall(
+                packageId: packageId,
+                name: packageLabel,
+                version: version,
+              );
+            },
           );
+          String? id;
+          jobs
+              .startInstall(
+                packageId: 'devkit.lang.nodejs',
+                packageLabel: 'Node.js',
+                version: '22.12.0',
+              )
+              .then((value) => id = value);
           async.flushMicrotasks();
-          return job;
-        }
 
-        var ticks = 0;
-        while (!snapshot().stage.isTerminal && ticks < 20) {
-          jobs.debugAdvanceOnce();
-          ticks++;
-        }
-        expect(job.stage, JobStage.completed);
-        async.flushMicrotasks();
+          // Walk the job to the terminal state.
+          late JobInfo job;
+          JobInfo snapshot() {
+            jobs.jobs().then(
+              (value) => job = value.singleWhere((j) => j.id == id),
+            );
+            async.flushMicrotasks();
+            return job;
+          }
 
-        // The installed registry now lists the new managed, active
-        // version (user feedback: installing must visibly "work").
-        late List<InstalledPackage> registered;
-        installed.installed().then((value) => registered = value);
-        async.flushMicrotasks();
-        final node = registered.singleWhere(
-          (p) => p.packageId == 'devkit.lang.nodejs',
-        );
-        expect(node.version, '22.12.0');
-        expect(node.status, InstalledStatus.installed);
-        expect(node.isActive, isTrue);
-        expect(node.ownership, InstallOwnership.devkitManaged);
-        expect(node.locationLabel, contains('nodejs'));
+          var ticks = 0;
+          while (!snapshot().stage.isTerminal && ticks < 20) {
+            jobs.debugAdvanceOnce();
+            ticks++;
+          }
+          expect(job.stage, JobStage.completed);
+          async.flushMicrotasks();
 
-        // A managed re-install supersedes the seeded entry instead of
-        // duplicating it, and external entries are untouched.
-        installed.addManagedInstall(
-          packageId: 'devkit.lang.python',
-          name: 'Python',
-          version: '3.13.1',
-        );
-        installed.installed().then((value) => registered = value);
-        async.flushMicrotasks();
-        final pythons = registered.where(
-          (p) => p.packageId == 'devkit.lang.python',
-        );
-        expect(pythons, hasLength(1));
-        expect(pythons.single.version, '3.13.1');
-        final vscode = registered.singleWhere(
-          (p) => p.packageId == 'devkit.ide.vscode',
-        );
-        expect(vscode.ownership, InstallOwnership.externalDetected);
-      });
-    });
+          // The installed registry now lists the new managed, active
+          // version (user feedback: installing must visibly "work").
+          late List<InstalledPackage> registered;
+          installed.installed().then((value) => registered = value);
+          async.flushMicrotasks();
+          final node = registered.singleWhere(
+            (p) => p.packageId == 'devkit.lang.nodejs',
+          );
+          expect(node.version, '22.12.0');
+          expect(node.status, InstalledStatus.installed);
+          expect(node.isActive, isTrue);
+          expect(node.ownership, InstallOwnership.devkitManaged);
+          expect(node.locationLabel, contains('nodejs'));
+
+          // A managed re-install supersedes the seeded entry instead of
+          // duplicating it, and external entries are untouched.
+          installed.addManagedInstall(
+            packageId: 'devkit.lang.python',
+            name: 'Python',
+            version: '3.13.1',
+          );
+          installed.installed().then((value) => registered = value);
+          async.flushMicrotasks();
+          final pythons = registered.where(
+            (p) => p.packageId == 'devkit.lang.python',
+          );
+          expect(pythons, hasLength(1));
+          expect(pythons.single.version, '3.13.1');
+          final vscode = registered.singleWhere(
+            (p) => p.packageId == 'devkit.ide.vscode',
+          );
+          expect(vscode.ownership, InstallOwnership.externalDetected);
+        });
+      },
+    );
   });
 }
 

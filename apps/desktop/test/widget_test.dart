@@ -84,8 +84,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(railIcon(Icons.explore_outlined));
     await tester.pumpAndSettle();
-    expect(find.text('Python'), findsOneWidget);
-    expect(find.text('Flutter'), findsOneWidget);
+    // No "All" chip (user feedback): the first category (Languages) is
+    // active by default, so the first card is a language package.
+    expect(find.text('Go'), findsOneWidget);
   });
 
   testWidgets('responsive layout: drawer below 700px, compact rail at '

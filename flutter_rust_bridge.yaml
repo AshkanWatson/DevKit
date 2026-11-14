@@ -1,0 +1,14 @@
+# flutter_rust_bridge codegen configuration (P1-02, ADR 0002).
+#
+# The runtime crate is pinned in crates/devkit-bridge/Cargo.toml ("=2.13.0")
+# and apps/desktop/pubspec.yaml (2.13.0); the codegen binary must match:
+#   cargo install flutter_rust_bridge_codegen@2.13.0
+# Regenerate with: flutter_rust_bridge_codegen generate
+
+rust_input: crate::api
+rust_root: crates/devkit-bridge/
+dart_output: apps/desktop/lib/core/bridge
+
+# Codegen runs offline; nothing is fetched from the network.
+# Repository policy: no downloads as part of builds/tests beyond toolchain
+# resolution by the package managers themselves.

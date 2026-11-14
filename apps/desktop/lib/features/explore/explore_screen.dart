@@ -35,12 +35,14 @@ class ExploreScreen extends ConsumerWidget {
           // categories the catalog actually contains.
           final categories = [
             for (final candidate in PackageCategory.values)
-              if (all.any((package) => package.category == candidate)) candidate,
+              if (all.any((package) => package.category == candidate))
+                candidate,
           ];
           // No "All" chip (user feedback): the effective filter always
           // resolves to a concrete category — the first one until the
           // user picks another.
-          final effective = category ?? (categories.isEmpty ? null : categories.first);
+          final effective =
+              category ?? (categories.isEmpty ? null : categories.first);
           final filtered = _applyFilters(all, query, effective);
           return _ExploreBody(
             filtered: filtered,

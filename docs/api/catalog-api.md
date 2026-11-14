@@ -1,6 +1,8 @@
 # Catalog API Contract — v1
 
-> **Status:** Phase 2 core implemented in `services/catalog-api/` (models, publication gate, public reads, pagination, ETag, error envelope). Not yet implemented: client-side cache (P2-04, waits on the Phase 1 bridge) and production deployment. Admin publication lives in Django admin, outside this contract.
+> **Status:** Phase 2 core implemented in `services/catalog-api/` (models, publication gate, public reads, pagination, ETag, error envelope) and client-side cache in `crates/devkit-catalog/src/remote.rs` (P2-04: ETag revalidation, offline reads from the SQLite `catalog_cache`, HTTPS-only client). Not yet implemented: production deployment. Admin publication lives in Django admin, outside this contract.
+>
+> **Client behavior note (P2-04):** the DevKit client pins `/api/v1/`, sends `If-None-Match` on every request when it holds a validator, and treats a `304` as "cached payload is current" — unchanged catalogs are never re-downloaded. Network unavailability degrades to cache-only browsing (the client never sends credentials, and a malformed payload is treated as a contract violation, not an offline condition). The client ignores unknown fields defensively; the list pages it follows use the `next` links as issued by the server.
 
 Base path: `/api/v1/`
 

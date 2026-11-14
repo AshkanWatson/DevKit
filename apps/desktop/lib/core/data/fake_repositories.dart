@@ -569,11 +569,7 @@ class FakeJobsRepository implements JobsRepository {
       // simulator wiring; the real engine records the receipt itself).
       if (job.stage == JobStage.completed && onInstallCompleted != null) {
         unawaited(
-          onInstallCompleted!(
-            job.packageId,
-            job.packageLabel,
-            job.version,
-          ),
+          onInstallCompleted!(job.packageId, job.packageLabel, job.version),
         );
       }
     }

@@ -1,0 +1,17 @@
+[package]
+name = "devkit-jobs"
+version.workspace = true
+edition.workspace = true
+license-file.workspace = true
+rust-version.workspace = true
+description = "Installation job state machine, event persistence, and simulated work"
+
+[dependencies]
+devkit-core = { path = "../devkit-core" }
+devkit-registry = { path = "../devkit-registry" }
+rusqlite = { workspace = true }
+serde = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

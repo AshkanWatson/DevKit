@@ -31,12 +31,22 @@ class ExploreScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(catalogPackagesProvider),
         ),
         data: (all) {
-          final filtered = _applyFilters(all, query, category);
+          // Category chips in canonical schema order, filtered to the
+          // categories the catalog actually contains.
+          final categories = [
+            for (final candidate in PackageCategory.values)
+              if (all.any((package) => package.category == candidate)) candidate,
+          ];
+          // No "All" chip (user feedback): the effective filter always
+          // resolves to a concrete category — the first one until the
+          // user picks another.
+          final effective = category ?? (categories.isEmpty ? null : categories.first);
+          final filtered = _applyFilters(all, query, effective);
           return _ExploreBody(
-            packages: all,
             filtered: filtered,
             query: query,
-            category: category,
+            categories: categories,
+            category: effective,
           );
         },
       ),
@@ -86,23 +96,20 @@ final _categoryFilterProvider =
 
 class _ExploreBody extends ConsumerWidget {
   const _ExploreBody({
-    required this.packages,
     required this.filtered,
     required this.query,
+    required this.categories,
     required this.category,
   });
 
-  final List<CatalogPackage> packages;
   final List<CatalogPackage> filtered;
   final String query;
+  final List<PackageCategory> categories;
   final PackageCategory? category;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final categories = {
-      for (final package in packages) package.category,
-    }.toList()..sort((a, b) => a.label.compareTo(b.label));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -129,15 +136,11 @@ class _ExploreBody extends ConsumerWidget {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    CategoryChip(
-                      label: 'All',
-                      selected: category == null,
-                      onSelected: () =>
-                          ref.read(_categoryFilterProvider.notifier).set(null),
-                    ),
+                    // Icons identify categories (user feedback); no "All"
+                    // chip — exactly one category is active at a time.
                     for (final candidate in categories)
                       CategoryChip(
-                        label: candidate.label,
+                        category: candidate,
                         selected: category == candidate,
                         onSelected: () => ref
                             .read(_categoryFilterProvider.notifier)

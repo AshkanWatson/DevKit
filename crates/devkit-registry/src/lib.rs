@@ -13,9 +13,11 @@
 pub mod catalog_http_cache;
 pub mod database;
 pub mod error;
+pub mod installed;
 pub mod migrations;
 pub mod package_cache;
 pub mod profile_cache;
 
 pub use database::Database;
 pub use error::RegistryError;
+pub use installed::{InstalledRecord, InstalledRepo, InstalledStatus};

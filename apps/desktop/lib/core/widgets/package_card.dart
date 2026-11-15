@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../app/theme/design_tokens.dart';
 import '../domain/domain_models.dart';
+import 'package_monogram.dart';
 
 /// Package card for the Explore list (DESIGN.md §4, §7): name, short
 /// description, publisher, category, and supported-platform indicators.
@@ -38,6 +39,10 @@ class PackageCard extends StatelessWidget {
           padding: const EdgeInsets.all(DesignTokens.space4),
           child: Row(
             children: [
+              // Brand monogram (user feedback: cards recognizable by a
+              // logo-like badge, e.g. the Go card).
+              PackageMonogram(package: package),
+              const SizedBox(width: DesignTokens.space3),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,9 +72,12 @@ class PackageCard extends StatelessWidget {
                     const SizedBox(height: DesignTokens.space2),
                     Row(
                       children: [
-                        Text(
-                          package.publisher,
-                          style: theme.textTheme.bodySmall,
+                        Flexible(
+                          child: Text(
+                            package.publisher,
+                            style: theme.textTheme.bodySmall,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                         const SizedBox(width: DesignTokens.space3),
                         if (installedVersion != null) ...[

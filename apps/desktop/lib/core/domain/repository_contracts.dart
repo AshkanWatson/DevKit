@@ -27,7 +27,12 @@ abstract interface class CatalogRepository {
 abstract interface class InstalledRepository {
   Future<List<InstalledPackage>> installed();
 
-  /// Set the global active version of a package (version-management doc §3).
+  /// Compute what activating `version` would change — the consent step's
+  /// data (DESIGN.md journey C). Pure read; future FFI: `plan_activation`.
+  Future<ActivationPlan> planActivation(String packageId, String version);
+
+  /// Set the global active version of a package (version-management doc
+  /// §3). May only be called after the user consented to the plan.
   Future<void> setActiveVersion(String packageId, String version);
 
   /// Uninstall one concrete version (destructive; the UI confirms first).

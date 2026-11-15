@@ -17,6 +17,13 @@ impl CancelToken {
         Self(Arc::new(AtomicBool::new(false)))
     }
 
+    /// Shares an existing flag (P3-03: the job runner's cooperative
+    /// cancellation flag drives the download engine directly, so
+    /// `cancel_job` stops an in-flight download at the next chunk).
+    pub fn from_shared(flag: Arc<AtomicBool>) -> Self {
+        Self(flag)
+    }
+
     /// Requests cancellation (safe to call multiple times).
     pub fn cancel(&self) {
         self.0.store(true, Ordering::SeqCst);

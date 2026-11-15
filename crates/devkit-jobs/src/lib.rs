@@ -14,16 +14,27 @@
 //! deterministic simulated plan ([`simulated::SimulatedPlan`]) that stands
 //! in for the Phase 3 installer adapters.
 
+pub mod environment;
 pub mod error;
 pub mod events;
 pub mod manager;
+pub mod pipeline;
+pub mod runner;
 pub mod simulated;
 pub mod state;
 pub mod store;
 
+pub use environment::{
+    activate, default_path_environment, plan_activation, remove_shims_referencing,
+    ActivationConsent, ActivationOutcome, ActivationPlan, PathChange, PathEnvironment, ShimPlan,
+};
 pub use error::JobsError;
 pub use events::JobEvent;
 pub use manager::{CancelOutcome, JobManager};
+pub use pipeline::{
+    cleanup_abandoned, current_platform, uninstall_version, validate_installation, InstallReceipt,
+    InstallSource, RealInstallConfig, ReceiptFile, RegistrySource, StageFailure, UninstallOutcome,
+};
 pub use simulated::{RunOutcome, SimulatedPlan};
 pub use state::Stage;
 pub use store::{JobKind, JobSnapshot, JobStore};

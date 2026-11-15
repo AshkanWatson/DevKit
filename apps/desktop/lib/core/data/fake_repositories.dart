@@ -215,12 +215,47 @@ class FakeInstalledRepository implements InstalledRepository {
 
   late List<InstalledPackage> _installed;
 
+  /// Whether the shims folder is already on the (simulated) user PATH;
+  /// the fake tracks the same fact the real `plan_activation` reads.
+  bool _shimsOnPath = false;
+
   @override
   Future<List<InstalledPackage>> installed() async =>
       List.unmodifiable(_installed);
 
   @override
+  Future<ActivationPlan> planActivation(
+    String packageId,
+    String version,
+  ) async {
+    // The Phase 1 fake computes the same facts the real plan carries
+    // (P3-04): one shim per entry point, the PATH state, and the version
+    // a revert would restore.
+    final shortId = packageId.split('.').last;
+    final active = _installed
+        .where(
+          (package) =>
+              package.packageId == packageId &&
+              package.ownership == InstallOwnership.devkitManaged &&
+              package.isActive,
+        )
+        .map((package) => package.version)
+        .toList();
+    return ActivationPlan(
+      shimFiles: ['shims\\$shortId.cmd'],
+      pathChange: _shimsOnPath
+          ? 'The DevKit shims folder is already on your user PATH — '
+                'no PATH change is needed.'
+          : 'Add the DevKit shims folder to your user PATH (user scope '
+                'only; no administrator rights required).',
+      reversible: true,
+      previousActiveVersion: active.isEmpty ? null : active.single,
+    );
+  }
+
+  @override
   Future<void> setActiveVersion(String packageId, String version) async {
+    _shimsOnPath = true;
     _installed = [
       for (final package in _installed)
         if (package.packageId == packageId &&

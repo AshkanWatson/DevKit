@@ -60,6 +60,44 @@ pub async fn download_and_verify<T: DownloadHttp>(
     destination: &Path,
     cancel: &CancelToken,
 ) -> Result<Downloaded, DownloadError> {
+    download_and_verify_with_progress(transport, request, destination, cancel, |_| {}).await
+}
+
+/// Same engine with a real progress callback (P3-03): invoked after every
+/// chunk with the cumulative number of downloaded bytes. The callback runs
+/// between chunk boundaries — it must stay cheap and never block. It
+/// receives raw byte counts; fraction/percent math (and the
+/// no-fake-percentages rule) is the job layer's responsibility.
+///
+/// The resulting future is `Send` when `F` is; the P3-03 job runner calls
+/// this on a per-job current-thread runtime, where a callback holding
+/// thread-local state (e.g. a SQLite connection) is fine.
+pub async fn download_and_verify_with_progress<T, F>(
+    transport: &T,
+    request: &DownloadRequest,
+    destination: &Path,
+    cancel: &CancelToken,
+    on_progress: F,
+) -> Result<Downloaded, DownloadError>
+where
+    T: DownloadHttp,
+    F: FnMut(u64),
+{
+    let mut on_progress = on_progress;
+    download_inner(transport, request, destination, cancel, &mut on_progress).await
+}
+
+async fn download_inner<T, F>(
+    transport: &T,
+    request: &DownloadRequest,
+    destination: &Path,
+    cancel: &CancelToken,
+    on_progress: &mut F,
+) -> Result<Downloaded, DownloadError>
+where
+    T: DownloadHttp,
+    F: FnMut(u64),
+{
     if cancel.is_cancelled() {
         return Err(DownloadError::Cancelled);
     }
@@ -74,7 +112,16 @@ pub async fn download_and_verify<T: DownloadHttp>(
             source,
         })?;
     }
-    let result = download_inner(transport, request, destination, &partial, cancel, expected).await;
+    let result = download_loop(
+        transport,
+        request,
+        destination,
+        &partial,
+        cancel,
+        expected,
+        on_progress,
+    )
+    .await;
     match result {
         Ok(downloaded) => Ok(downloaded),
         Err(error) => {
@@ -87,14 +134,20 @@ pub async fn download_and_verify<T: DownloadHttp>(
     }
 }
 
-async fn download_inner<T: DownloadHttp>(
+#[allow(clippy::too_many_arguments)]
+async fn download_loop<T, F>(
     transport: &T,
     request: &DownloadRequest,
     destination: &Path,
     partial: &Path,
     cancel: &CancelToken,
     expected: [u8; 32],
-) -> Result<Downloaded, DownloadError> {
+    on_progress: &mut F,
+) -> Result<Downloaded, DownloadError>
+where
+    T: DownloadHttp,
+    F: FnMut(u64),
+{
     let response = transport.get(&request.url).await?;
 
     // Content-Length cross-check when the server declares one.
@@ -136,6 +189,7 @@ async fn download_inner<T: DownloadHttp>(
                 path: partial.to_path_buf(),
                 source,
             })?;
+        on_progress(size);
     }
 
     if size != request.size_bytes {

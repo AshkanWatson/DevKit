@@ -64,6 +64,13 @@ impl<'a> JobStore<'a> {
         Self { conn }
     }
 
+    /// Borrowed connection for sibling repositories (the pipeline uses
+    /// the same connection for receipts and job events — one writer per
+    /// job thread).
+    pub fn connection(&self) -> &'a Connection {
+        self.conn
+    }
+
     /// Create a job row in `QUEUED` and record its first event (seq 1).
     pub fn create_job(
         &self,

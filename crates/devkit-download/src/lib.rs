@@ -36,4 +36,6 @@ pub mod verify;
 pub use cancel::CancelToken;
 pub use error::DownloadError;
 pub use http::{ChunkStream, DownloadHttp, ReqwestDownloadHttp, Response};
-pub use verify::{download_and_verify, DownloadRequest, Downloaded};
+pub use verify::{
+    download_and_verify, download_and_verify_with_progress, DownloadRequest, Downloaded,
+};

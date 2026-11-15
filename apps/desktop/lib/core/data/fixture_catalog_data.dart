@@ -281,22 +281,22 @@ const String nodejsPackageJson = r'''
   "default_version_policy": "stable",
   "versions": [
     {
-      "version": "22.12.0",
+      "version": "26.13.1",
       "channel": "stable",
-      "release_date": "2024-10-29",
+      "release_date": "2026-10-13",
       "artifacts": [
         {
           "os": "windows", "architecture": "x64", "installer": "archive",
-          "url": "https://nodejs.example.invalid/node-v22.12.0-win-x64.zip",
+          "url": "https://nodejs.example.invalid/node-v26.13.1-win-x64.zip",
           "sha256": "1010101010101010101010101010101010101010101010101010101010101010",
-          "size_bytes": 32000000, "archive_root": "node",
+          "size_bytes": 36000000, "archive_root": "node",
           "executable_relative_path": "bin/node.exe"
         },
         {
           "os": "macos", "architecture": "arm64", "installer": "archive",
-          "url": "https://nodejs.example.invalid/node-v22.12.0-darwin-arm64.tar.gz",
+          "url": "https://nodejs.example.invalid/node-v26.13.1-darwin-arm64.tar.gz",
           "sha256": "1011111111111111111111111111111111111111111111111111111111111111",
-          "size_bytes": 30000000, "archive_root": "node",
+          "size_bytes": 34000000, "archive_root": "node",
           "executable_relative_path": "bin/node"
         }
       ]

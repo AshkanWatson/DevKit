@@ -21,7 +21,9 @@ abstract final class AppTheme {
 
   static const _lightScheme = ColorScheme.light(
     primary: DesignTokens.accentLight,
-    onPrimary: Colors.white,
+    onPrimary: DesignTokens.onAccentLight,
+    secondary: DesignTokens.accentSecondaryLight,
+    onSecondary: DesignTokens.onAccentSecondaryLight,
     surface: DesignTokens.surfaceLight,
     onSurface: DesignTokens.textPrimaryLight,
     onSurfaceVariant: DesignTokens.textSecondaryLight,
@@ -33,6 +35,8 @@ abstract final class AppTheme {
   static const _darkScheme = ColorScheme.dark(
     primary: DesignTokens.accentDark,
     onPrimary: Color(0xFF10131A),
+    secondary: DesignTokens.accentSecondaryDark,
+    onSecondary: Color(0xFF17131F),
     surface: DesignTokens.surfaceDark,
     onSurface: DesignTokens.textPrimaryDark,
     onSurfaceVariant: DesignTokens.textSecondaryDark,

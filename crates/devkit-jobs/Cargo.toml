@@ -4,14 +4,32 @@ version.workspace = true
 edition.workspace = true
 license-file.workspace = true
 rust-version.workspace = true
-description = "Installation job state machine, event persistence, and simulated work"
+description = "Installation job state machine, event persistence, and install pipeline"
 
 [dependencies]
 devkit-core = { path = "../devkit-core" }
 devkit-registry = { path = "../devkit-registry" }
+devkit-download = { path = "../devkit-download" }
+devkit-install = { path = "../devkit-install" }
 rusqlite = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
 uuid = { workspace = true }
+# P3-03: the real pipeline block_on's the async download engine on the
+# job's own worker thread (ADR 0002: production async on an executor).
+tokio = { workspace = true }
+# P3-03: disk space check at PREPARING (installation-lifecycle.md §3).
+fs4 = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+# P3-04 activation (ADR 0007): user-scope HKCU PATH integration + the
+# WM_SETTINGCHANGE broadcast. Never used on other targets.
+winreg = { workspace = true }
+windows-sys = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
+# P3-03 pipeline tests: local fixture HTTP server + fixture hashing
+# (testing-strategy.md rule 1: never real vendor hosts).
+tiny_http = { workspace = true }
+sha2 = { workspace = true }

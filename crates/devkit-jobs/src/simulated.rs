@@ -12,6 +12,7 @@ use std::time::Duration;
 use devkit_core::error::ErrorCode;
 
 use crate::error::JobsError;
+use crate::runner::record_terminal_chain;
 use crate::state::Stage;
 use crate::store::JobStore;
 
@@ -206,7 +207,10 @@ fn finish_cancelled(
         Stage::Cancelled,
         None,
         "Cancelled at a safe boundary (simulated)",
-    )
+        "Removing partial artifacts from staging (simulated)",
+        "Managed root restored to pre-install state (simulated)",
+    )?;
+    Ok(RunOutcome::RolledBack)
 }
 
 fn finish_failed(
@@ -222,56 +226,8 @@ fn finish_failed(
         Stage::Failed,
         Some(code),
         &format!("Simulated failure at stage boundary ({code})"),
-    )
-}
-
-/// `current -> terminal -> ROLLING_BACK -> ROLLED_BACK`, each with a
-/// validated transition and a persisted event.
-pub(crate) fn record_terminal_chain(
-    store: &JobStore,
-    job_id: &str,
-    current: Stage,
-    terminal: Stage,
-    error_code: Option<ErrorCode>,
-    terminal_message: &str,
-) -> Result<RunOutcome, JobsError> {
-    if !current.can_transition(terminal) {
-        return Err(JobsError::Internal(format!(
-            "invalid state transition {current} -> {terminal}"
-        )));
-    }
-    store.record_event(
-        job_id,
-        terminal,
-        None,
-        terminal_message,
-        error_code.map(|c| c.as_str()),
-    )?;
-
-    if !terminal.can_transition(Stage::RollingBack) {
-        return Err(JobsError::Internal(format!(
-            "invalid state transition {terminal} -> ROLLING_BACK"
-        )));
-    }
-    store.record_event(
-        job_id,
-        Stage::RollingBack,
-        None,
         "Removing partial artifacts from staging (simulated)",
-        None,
-    )?;
-
-    if !Stage::RollingBack.can_transition(Stage::RolledBack) {
-        return Err(JobsError::Internal(
-            "invalid state transition ROLLING_BACK -> ROLLED_BACK".to_string(),
-        ));
-    }
-    store.record_event(
-        job_id,
-        Stage::RolledBack,
-        None,
         "Managed root restored to pre-install state (simulated)",
-        None,
     )?;
     Ok(RunOutcome::RolledBack)
 }
@@ -301,6 +257,8 @@ pub fn recover_interrupted(
         Stage::Failed,
         Some(code),
         "Job interrupted by process restart (simulated)",
+        "Removing partial artifacts from staging (simulated)",
+        "Managed root restored to pre-install state (simulated)",
     )?;
     Ok(())
 }

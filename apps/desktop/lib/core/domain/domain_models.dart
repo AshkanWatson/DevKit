@@ -321,6 +321,33 @@ class InstalledPackage {
   final String locationLabel;
 }
 
+/// What activating a version would change (P3-04, DESIGN.md journey C
+/// step 4: "Show what activation changes"). Mirrors the Rust
+/// `plan_activation` output; the consent dialog renders exactly this.
+class ActivationPlan {
+  const ActivationPlan({
+    required this.shimFiles,
+    required this.pathChange,
+    required this.reversible,
+    this.previousActiveVersion,
+  });
+
+  /// Managed-root-relative shim files that will be (re)written, e.g.
+  /// `shims\git.cmd`. Empty for library packages.
+  final List<String> shimFiles;
+
+  /// What will happen to the user PATH, phrased for the consent dialog
+  /// (appended once / already present / unavailable on this platform).
+  final String pathChange;
+
+  /// Whether activation can be reverted (the previous mapping and shim
+  /// are kept for the operation's duration).
+  final bool reversible;
+
+  /// The version that is active now, and that a revert would restore.
+  final String? previousActiveVersion;
+}
+
 /// Job stages: the documented state machine
 /// (docs/architecture/installation-lifecycle.md §3). Wire forms match the
 /// Rust `Stage` exactly so the FFI swap needs no screen changes.

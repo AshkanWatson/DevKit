@@ -160,17 +160,7 @@ class _InstalledRow extends ConsumerWidget {
             // Actions (DESIGN.md §4): Set Active / Repair (stub) / Uninstall.
             if (managed) ...[
               TextButton(
-                onPressed: canSetActive
-                    ? () async {
-                        await ref
-                            .read(installedRepositoryProvider)
-                            .setActiveVersion(
-                              package.packageId,
-                              package.version,
-                            );
-                        ref.invalidate(installedPackagesProvider);
-                      }
-                    : null,
+                onPressed: canSetActive ? () => _setActive(context, ref) : null,
                 child: Text(
                   'Set Active',
                   style: canSetActive
@@ -199,6 +189,26 @@ class _InstalledRow extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _setActive(BuildContext context, WidgetRef ref) async {
+    // Consent gate (P3-04, DESIGN.md §8 journey C): show exactly what the
+    // activation will change before anything is applied. A declined (or
+    // dismissed) dialog must leave every piece of state untouched.
+    final repository = ref.read(installedRepositoryProvider);
+    final plan = await repository.planActivation(
+      package.packageId,
+      package.version,
+    );
+    if (!context.mounted) return;
+    final consented = await showActivationConsent(
+      context,
+      title: 'Set ${package.name} ${package.version} active?',
+      plan: plan,
+    );
+    if (!consented) return;
+    await repository.setActiveVersion(package.packageId, package.version);
+    ref.invalidate(installedPackagesProvider);
   }
 
   Future<void> _uninstall(BuildContext context, WidgetRef ref) async {

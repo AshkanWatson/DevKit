@@ -45,3 +45,12 @@ flate2 = "1"
 # P3-02 tests: property-style entry-path validation (testing-strategy.md
 # "Property/fuzz" row).
 proptest = "1"
+# P3-03: disk space check at PREPARING (std has no free-space query).
+fs4 = { version = "1", features = ["sync"] }
+# P3-04: user-scope PATH integration (ADR 0007): HKCU\Environment read/write
+# with REG_EXPAND_SZ preserved, plus the WM_SETTINGCHANGE broadcast.
+winreg = "0.56"
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+] }

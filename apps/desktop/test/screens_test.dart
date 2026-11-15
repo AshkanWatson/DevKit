@@ -110,6 +110,24 @@ void main() {
       expect(find.text('Python'), findsOneWidget);
     });
 
+    testWidgets('package cards show brand monogram badges', (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+      await goTo(tester, Icons.explore_outlined);
+
+      // The Go card (first language) carries the GO monogram in Go's
+      // brand color.
+      expect(find.text('GO'), findsOneWidget);
+
+      // Node.js further down the list carries the JS monogram.
+      await tester.dragUntilVisible(
+        find.text('Node.js'),
+        find.byType(ListView).first,
+        const Offset(0, -200),
+      );
+      expect(find.text('JS'), findsOneWidget);
+    });
+
     testWidgets('search and category state survive navigation', (tester) async {
       await tester.pumpWidget(buildApp());
       await tester.pumpAndSettle();
@@ -481,6 +499,108 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Git'), findsNothing);
     });
+
+    // P3-04: activation is consent-gated (DESIGN.md journey C steps 4–5,
+    // security-model.md §7). The dialog content is the contract: it lists
+    // exactly what will change before anything is applied, and declining
+    // must change nothing.
+    group('Set Active consent', () {
+      testWidgets('dialog lists shims, PATH change and revert info', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildApp());
+        await tester.pumpAndSettle();
+        await goTo(tester, Icons.inventory_2_outlined);
+
+        // Git 2.51.0 is an installed, inactive, DevKit-managed version.
+        final setActive = find.descendant(
+          of: find
+              .ancestor(of: find.text('Git'), matching: find.byType(Card))
+              .first,
+          matching: find.text('Set Active'),
+        );
+        await tester.tap(setActive);
+        await tester.pumpAndSettle();
+
+        // The dialog shows the exact plan content (shim file, user-PATH
+        // line, reversibility). No previous active version exists for
+        // Git, so that line is absent.
+        expect(find.text('Set Git 2.51.0 active?'), findsOneWidget);
+        expect(find.textContaining(r'shims\git.cmd'), findsOneWidget);
+        expect(
+          find.textContaining('Add the DevKit shims folder'),
+          findsOneWidget,
+        );
+        expect(find.textContaining('user scope'), findsOneWidget);
+        expect(find.textContaining('reversible'), findsOneWidget);
+        expect(find.textContaining('Currently active'), findsNothing);
+        expect(find.text('Set active'), findsOneWidget);
+
+        // Cancel changes nothing: the dialog closes and Git stays
+        // inactive.
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
+        expect(find.text('Set Git 2.51.0 active?'), findsNothing);
+        final gitRowAfterCancel = find
+            .ancestor(of: find.text('Git'), matching: find.byType(Card))
+            .first;
+        expect(
+          find.descendant(of: gitRowAfterCancel, matching: find.text('Active')),
+          findsNothing,
+        );
+      });
+
+      testWidgets('confirming activates the version', (tester) async {
+        final installed = FakeInstalledRepository();
+        await tester.pumpWidget(
+          buildApp(
+            overrides: [
+              installedRepositoryProvider.overrideWithValue(installed),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+        await goTo(tester, Icons.inventory_2_outlined);
+
+        final setActive = find.descendant(
+          of: find
+              .ancestor(of: find.text('Git'), matching: find.byType(Card))
+              .first,
+          matching: find.text('Set Active'),
+        );
+        await tester.tap(setActive);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Set active'));
+        await tester.pumpAndSettle();
+
+        // Git 2.51.0 is now the active version of its package.
+        final gitRow = find
+            .ancestor(of: find.text('Git'), matching: find.byType(Card))
+            .first;
+        expect(
+          find.descendant(of: gitRow, matching: find.text('Active')),
+          findsOneWidget,
+        );
+        final registered = await installed.installed();
+        final git = registered.singleWhere(
+          (package) => package.packageId == 'devkit.utility.git',
+        );
+        expect(git.isActive, isTrue);
+        expect(git.version, '2.51.0');
+
+        // The Set Active control is now disabled (the active row offers
+        // no re-activation; DESIGN.md §8: disabled actions explain why).
+        final button = tester.widget<TextButton>(
+          find
+              .ancestor(
+                of: find.text('Set Active'),
+                matching: find.byType(TextButton),
+              )
+              .first,
+        );
+        expect(button.onPressed, isNull);
+      });
+    });
   });
 
   group('Downloads', () {
@@ -698,7 +818,7 @@ void main() {
               .startInstall(
                 packageId: 'devkit.lang.nodejs',
                 packageLabel: 'Node.js',
-                version: '22.12.0',
+                version: '26.13.1',
               )
               .then((value) => id = value);
           async.flushMicrotasks();
@@ -729,7 +849,7 @@ void main() {
           final node = registered.singleWhere(
             (p) => p.packageId == 'devkit.lang.nodejs',
           );
-          expect(node.version, '22.12.0');
+          expect(node.version, '26.13.1');
           expect(node.status, InstalledStatus.installed);
           expect(node.isActive, isTrue);
           expect(node.ownership, InstallOwnership.devkitManaged);

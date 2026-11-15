@@ -13,7 +13,13 @@ abstract final class DesignTokens {
   static const textPrimaryLight = Color(0xFF17191C);
   static const textSecondaryLight = Color(0xFF626A73);
   static const borderLight = Color(0xFFE1E5E9);
-  static const accentLight = Color(0xFF246BFD);
+  // Accent: yellow (user-directed 2026-11-14); on-primary text is dark for
+  // contrast on yellow.
+  static const accentLight = Color(0xFFF2B705);
+  static const onAccentLight = Color(0xFF201A03);
+  // Secondary accent: pastel purple (user-directed 2026-11-14).
+  static const accentSecondaryLight = Color(0xFFB9A7D9);
+  static const onAccentSecondaryLight = Color(0xFF241B33);
   static const successLight = Color(0xFF16845B);
   static const warningLight = Color(0xFFA96812);
   static const dangerLight = Color(0xFFC43D4B);
@@ -25,7 +31,10 @@ abstract final class DesignTokens {
   static const textPrimaryDark = Color(0xFFF3F5F7);
   static const textSecondaryDark = Color(0xFFA4ADB7);
   static const borderDark = Color(0xFF30363D);
-  static const accentDark = Color(0xFF6D9BFF);
+  // Accent: yellow (user-directed 2026-11-14); on-primary stays dark.
+  static const accentDark = Color(0xFFFFD54F);
+  // Secondary accent: pastel purple (user-directed 2026-11-14).
+  static const accentSecondaryDark = Color(0xFF9B8AC4);
   static const successDark = Color(0xFF39B980);
   static const warningDark = Color(0xFFE6AD55);
   static const dangerDark = Color(0xFFF0717D);

@@ -16,7 +16,8 @@ pub mod error;
 pub mod path;
 
 pub use archive::{
-    extract_bytes, extract_file, ArchiveFormat, ArchiveLimits, ExtractResult, ExtractedFile,
+    detect_format, extract_bytes, extract_file, ArchiveFormat, ArchiveLimits, ExtractResult,
+    ExtractedFile,
 };
 pub use error::{ArchiveError, UnsafePathReason};
 pub use path::{ensure_within, validate_entry_path};

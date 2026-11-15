@@ -9,6 +9,9 @@ use std::fmt;
 pub enum JobsError {
     Sql(rusqlite::Error),
     Registry(devkit_registry::RegistryError),
+    /// Filesystem failure outside the registry repositories (staging
+    /// directories, version directories, uninstall cleanup).
+    Io(std::io::Error),
     /// A bug in this crate rather than bad input (e.g. an invalid state
     /// transition the state machine should have prevented).
     Internal(String),
@@ -19,6 +22,7 @@ impl fmt::Display for JobsError {
         match self {
             JobsError::Sql(e) => write!(f, "sqlite error: {e}"),
             JobsError::Registry(e) => write!(f, "registry error: {e}"),
+            JobsError::Io(e) => write!(f, "filesystem error: {e}"),
             JobsError::Internal(message) => write!(f, "jobs bug: {message}"),
         }
     }
@@ -29,6 +33,7 @@ impl std::error::Error for JobsError {
         match self {
             JobsError::Sql(e) => Some(e),
             JobsError::Registry(e) => Some(e),
+            JobsError::Io(e) => Some(e),
             JobsError::Internal(_) => None,
         }
     }
@@ -43,5 +48,11 @@ impl From<rusqlite::Error> for JobsError {
 impl From<devkit_registry::RegistryError> for JobsError {
     fn from(e: devkit_registry::RegistryError) -> Self {
         JobsError::Registry(e)
+    }
+}
+
+impl From<std::io::Error> for JobsError {
+    fn from(e: std::io::Error) -> Self {
+        JobsError::Io(e)
     }
 }

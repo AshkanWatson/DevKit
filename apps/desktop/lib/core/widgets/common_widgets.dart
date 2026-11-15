@@ -92,6 +92,92 @@ Future<bool> showInstallPlanReview(
   return result ?? false;
 }
 
+/// Activation consent dialog (P3-04, DESIGN.md journey C steps 4–5:
+/// "Show what activation changes … Confirm"). Lists exactly what the
+/// activation will change — shim files, the user-PATH change, and the
+/// version a revert would restore — before anything is applied.
+///
+/// Returns true when the user consented; the caller must treat a false
+/// (or dismissed) result as "nothing may change".
+Future<bool> showActivationConsent(
+  BuildContext context, {
+  required String title,
+  required ActivationPlan plan,
+}) async {
+  final theme = Theme.of(context);
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Activating will make these changes:'),
+          const SizedBox(height: 8),
+          for (final shim in plan.shimFiles) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('• '),
+                Expanded(child: Text('Write shim: $shim')),
+              ],
+            ),
+          ],
+          if (plan.shimFiles.isEmpty) ...[
+            const Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('• '),
+                Expanded(child: Text('No shim is needed for this package.')),
+              ],
+            ),
+          ],
+          const SizedBox(height: 4),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('• '),
+              Expanded(child: Text('User PATH: ${plan.pathChange}')),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (plan.previousActiveVersion != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                'Currently active: ${plan.previousActiveVersion}. '
+                'Activating replaces the mapping; the other version stays '
+                'installed.',
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+          Text(
+            plan.reversible
+                ? 'This change is reversible; activation can fail safely '
+                      'and leave everything as it was.'
+                : 'This change cannot be reverted automatically.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('Set active'),
+        ),
+      ],
+    ),
+  );
+  return result ?? false;
+}
+
 /// Error state (DESIGN.md §7: components must support error states).
 class ErrorState extends StatelessWidget {
   const ErrorState({

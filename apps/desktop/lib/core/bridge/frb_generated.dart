@@ -4,6 +4,12 @@
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
 import 'api.dart';
+import 'api/catalog.dart';
+import 'api/engine.dart';
+import 'api/error.dart';
+import 'api/installed.dart';
+import 'api/jobs.dart';
+import 'api/simple.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -57,7 +63,9 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
       RustLibWire.fromExternalLibrary;
 
   @override
-  Future<void> executeRustInitializers() async {}
+  Future<void> executeRustInitializers() async {
+    await api.crateApiSimpleInitApp();
+  }
 
   @override
   ExternalLibraryLoaderConfig get defaultExternalLibraryLoaderConfig =>
@@ -67,7 +75,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 1462234779;
+  int get rustContentHash => -986572370;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -79,9 +87,77 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
+  Future<CancelJobResult> crateApiJobsCancelJob({required String jobId});
+
   Future<AppInfo> crateApiGetAppInfo();
 
+  Future<EnginePathsInfo> crateApiEngineGetEnginePaths();
+
+  Future<JobDto?> crateApiJobsGetJob({required String jobId});
+
+  Future<List<JobEventDto>> crateApiJobsGetJobEvents({
+    required String jobId,
+    required PlatformInt64 lastSeenSeq,
+  });
+
+  Future<CatalogPackageDto?> crateApiCatalogGetPackageDetails({
+    required String packageId,
+  });
+
   Future<SystemInfo> crateApiGetSystemInfo();
+
+  String crateApiSimpleGreet({required String name});
+
+  Future<void> crateApiSimpleInitApp();
+
+  Future<void> crateApiEngineInitEngine({String? dbPath, String? managedRoot});
+
+  Future<List<CatalogProfileDto>> crateApiCatalogListCatalogProfiles();
+
+  Future<List<InstalledPackageDto>> crateApiInstalledListInstalledPackages();
+
+  Future<List<InstalledVersionDto>> crateApiInstalledListInstalledVersions({
+    required String packageId,
+  });
+
+  Future<List<JobDto>> crateApiJobsListJobs();
+
+  Future<ActivationPlanDto> crateApiInstalledPlanActivationFor({
+    required String packageId,
+    required String version,
+  });
+
+  Future<RemovalResultDto> crateApiInstalledRemoveManagedVersion({
+    required String packageId,
+    required String version,
+  });
+
+  Future<List<CatalogPackageDto>> crateApiCatalogSearchCatalog({
+    String? query,
+    String? category,
+  });
+
+  Future<ActivationOutcomeDto> crateApiInstalledSetActiveVersion({
+    required String packageId,
+    required String version,
+    required bool consent,
+  });
+
+  Future<String> crateApiJobsStartInstall({
+    required String packageId,
+    required String version,
+  });
+
+  Future<SyncCatalogStats> crateApiCatalogSyncCatalog({
+    required String baseUrl,
+  });
+
+  Stream<JobEventDto> crateApiJobsWatchJobEvents({
+    required String jobId,
+    required PlatformInt64 lastSeenSeq,
+  });
+
+  Stream<List<JobDto>> crateApiJobsWatchJobs();
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -93,6 +169,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   });
 
   @override
+  Future<CancelJobResult> crateApiJobsCancelJob({required String jobId}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(jobId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 1,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_cancel_job_result,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiJobsCancelJobConstMeta,
+        argValues: [jobId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiJobsCancelJobConstMeta =>
+      const TaskConstMeta(debugName: "cancel_job", argNames: ["jobId"]);
+
+  @override
   Future<AppInfo> crateApiGetAppInfo() {
     return handler.executeNormal(
       NormalTask(
@@ -101,7 +205,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 1,
+            funcId: 2,
             port: port_,
           );
         },
@@ -120,6 +224,128 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "get_app_info", argNames: []);
 
   @override
+  Future<EnginePathsInfo> crateApiEngineGetEnginePaths() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 3,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_engine_paths_info,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiEngineGetEnginePathsConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiEngineGetEnginePathsConstMeta =>
+      const TaskConstMeta(debugName: "get_engine_paths", argNames: []);
+
+  @override
+  Future<JobDto?> crateApiJobsGetJob({required String jobId}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(jobId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 4,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_job_dto,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiJobsGetJobConstMeta,
+        argValues: [jobId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiJobsGetJobConstMeta =>
+      const TaskConstMeta(debugName: "get_job", argNames: ["jobId"]);
+
+  @override
+  Future<List<JobEventDto>> crateApiJobsGetJobEvents({
+    required String jobId,
+    required PlatformInt64 lastSeenSeq,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(jobId, serializer);
+          sse_encode_i_64(lastSeenSeq, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 5,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_job_event_dto,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiJobsGetJobEventsConstMeta,
+        argValues: [jobId, lastSeenSeq],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiJobsGetJobEventsConstMeta => const TaskConstMeta(
+    debugName: "get_job_events",
+    argNames: ["jobId", "lastSeenSeq"],
+  );
+
+  @override
+  Future<CatalogPackageDto?> crateApiCatalogGetPackageDetails({
+    required String packageId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(packageId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 6,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_catalog_package_dto,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiCatalogGetPackageDetailsConstMeta,
+        argValues: [packageId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiCatalogGetPackageDetailsConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_package_details",
+        argNames: ["packageId"],
+      );
+
+  @override
   Future<SystemInfo> crateApiGetSystemInfo() {
     return handler.executeNormal(
       NormalTask(
@@ -128,7 +354,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 2,
+            funcId: 7,
             port: port_,
           );
         },
@@ -146,10 +372,535 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiGetSystemInfoConstMeta =>
       const TaskConstMeta(debugName: "get_system_info", argNames: []);
 
+  @override
+  String crateApiSimpleGreet({required String name}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(name, serializer);
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiSimpleGreetConstMeta,
+        argValues: [name],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSimpleGreetConstMeta =>
+      const TaskConstMeta(debugName: "greet", argNames: ["name"]);
+
+  @override
+  Future<void> crateApiSimpleInitApp() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 9,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiSimpleInitAppConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSimpleInitAppConstMeta =>
+      const TaskConstMeta(debugName: "init_app", argNames: []);
+
+  @override
+  Future<void> crateApiEngineInitEngine({String? dbPath, String? managedRoot}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_opt_String(dbPath, serializer);
+          sse_encode_opt_String(managedRoot, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 10,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiEngineInitEngineConstMeta,
+        argValues: [dbPath, managedRoot],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiEngineInitEngineConstMeta => const TaskConstMeta(
+    debugName: "init_engine",
+    argNames: ["dbPath", "managedRoot"],
+  );
+
+  @override
+  Future<List<CatalogProfileDto>> crateApiCatalogListCatalogProfiles() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 11,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_catalog_profile_dto,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiCatalogListCatalogProfilesConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiCatalogListCatalogProfilesConstMeta =>
+      const TaskConstMeta(debugName: "list_catalog_profiles", argNames: []);
+
+  @override
+  Future<List<InstalledPackageDto>> crateApiInstalledListInstalledPackages() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 12,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_installed_package_dto,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiInstalledListInstalledPackagesConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiInstalledListInstalledPackagesConstMeta =>
+      const TaskConstMeta(debugName: "list_installed_packages", argNames: []);
+
+  @override
+  Future<List<InstalledVersionDto>> crateApiInstalledListInstalledVersions({
+    required String packageId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(packageId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 13,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_installed_version_dto,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiInstalledListInstalledVersionsConstMeta,
+        argValues: [packageId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiInstalledListInstalledVersionsConstMeta =>
+      const TaskConstMeta(
+        debugName: "list_installed_versions",
+        argNames: ["packageId"],
+      );
+
+  @override
+  Future<List<JobDto>> crateApiJobsListJobs() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 14,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_job_dto,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiJobsListJobsConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiJobsListJobsConstMeta =>
+      const TaskConstMeta(debugName: "list_jobs", argNames: []);
+
+  @override
+  Future<ActivationPlanDto> crateApiInstalledPlanActivationFor({
+    required String packageId,
+    required String version,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(packageId, serializer);
+          sse_encode_String(version, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 15,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_activation_plan_dto,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiInstalledPlanActivationForConstMeta,
+        argValues: [packageId, version],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiInstalledPlanActivationForConstMeta =>
+      const TaskConstMeta(
+        debugName: "plan_activation_for",
+        argNames: ["packageId", "version"],
+      );
+
+  @override
+  Future<RemovalResultDto> crateApiInstalledRemoveManagedVersion({
+    required String packageId,
+    required String version,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(packageId, serializer);
+          sse_encode_String(version, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 16,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_removal_result_dto,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiInstalledRemoveManagedVersionConstMeta,
+        argValues: [packageId, version],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiInstalledRemoveManagedVersionConstMeta =>
+      const TaskConstMeta(
+        debugName: "remove_managed_version",
+        argNames: ["packageId", "version"],
+      );
+
+  @override
+  Future<List<CatalogPackageDto>> crateApiCatalogSearchCatalog({
+    String? query,
+    String? category,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_opt_String(query, serializer);
+          sse_encode_opt_String(category, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 17,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_catalog_package_dto,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiCatalogSearchCatalogConstMeta,
+        argValues: [query, category],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiCatalogSearchCatalogConstMeta =>
+      const TaskConstMeta(
+        debugName: "search_catalog",
+        argNames: ["query", "category"],
+      );
+
+  @override
+  Future<ActivationOutcomeDto> crateApiInstalledSetActiveVersion({
+    required String packageId,
+    required String version,
+    required bool consent,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(packageId, serializer);
+          sse_encode_String(version, serializer);
+          sse_encode_bool(consent, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 18,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_activation_outcome_dto,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiInstalledSetActiveVersionConstMeta,
+        argValues: [packageId, version, consent],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiInstalledSetActiveVersionConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_active_version",
+        argNames: ["packageId", "version", "consent"],
+      );
+
+  @override
+  Future<String> crateApiJobsStartInstall({
+    required String packageId,
+    required String version,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(packageId, serializer);
+          sse_encode_String(version, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 19,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiJobsStartInstallConstMeta,
+        argValues: [packageId, version],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiJobsStartInstallConstMeta => const TaskConstMeta(
+    debugName: "start_install",
+    argNames: ["packageId", "version"],
+  );
+
+  @override
+  Future<SyncCatalogStats> crateApiCatalogSyncCatalog({
+    required String baseUrl,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(baseUrl, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 20,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_sync_catalog_stats,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiCatalogSyncCatalogConstMeta,
+        argValues: [baseUrl],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiCatalogSyncCatalogConstMeta =>
+      const TaskConstMeta(debugName: "sync_catalog", argNames: ["baseUrl"]);
+
+  @override
+  Stream<JobEventDto> crateApiJobsWatchJobEvents({
+    required String jobId,
+    required PlatformInt64 lastSeenSeq,
+  }) {
+    final sink = RustStreamSink<JobEventDto>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_String(jobId, serializer);
+            sse_encode_i_64(lastSeenSeq, serializer);
+            sse_encode_StreamSink_job_event_dto_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 21,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_bridge_error,
+          ),
+          constMeta: kCrateApiJobsWatchJobEventsConstMeta,
+          argValues: [jobId, lastSeenSeq, sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiJobsWatchJobEventsConstMeta => const TaskConstMeta(
+    debugName: "watch_job_events",
+    argNames: ["jobId", "lastSeenSeq", "sink"],
+  );
+
+  @override
+  Stream<List<JobDto>> crateApiJobsWatchJobs() {
+    final sink = RustStreamSink<List<JobDto>>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_StreamSink_list_job_dto_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 22,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_bridge_error,
+          ),
+          constMeta: kCrateApiJobsWatchJobsConstMeta,
+          argValues: [sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiJobsWatchJobsConstMeta =>
+      const TaskConstMeta(debugName: "watch_jobs", argNames: ["sink"]);
+
+  @protected
+  AnyhowException dco_decode_AnyhowException(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return AnyhowException(raw as String);
+  }
+
+  @protected
+  RustStreamSink<JobEventDto> dco_decode_StreamSink_job_event_dto_Sse(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
+  RustStreamSink<List<JobDto>> dco_decode_StreamSink_list_job_dto_Sse(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
   @protected
   String dco_decode_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as String;
+  }
+
+  @protected
+  ActivationOutcomeDto dco_decode_activation_outcome_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return ActivationOutcomeDto(
+      packageId: dco_decode_String(arr[0]),
+      version: dco_decode_String(arr[1]),
+      previousActiveVersion: dco_decode_opt_String(arr[2]),
+      shimsWritten: dco_decode_usize(arr[3]),
+      pathChange: dco_decode_path_change_dto(arr[4]),
+    );
+  }
+
+  @protected
+  ActivationPlanDto dco_decode_activation_plan_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return ActivationPlanDto(
+      packageId: dco_decode_String(arr[0]),
+      version: dco_decode_String(arr[1]),
+      previousActiveVersion: dco_decode_opt_String(arr[2]),
+      shims: dco_decode_list_shim_plan_dto(arr[3]),
+      shimsDirRelative: dco_decode_String(arr[4]),
+      pathChange: dco_decode_path_change_dto(arr[5]),
+    );
   }
 
   @protected
@@ -165,15 +916,434 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  bool dco_decode_bool(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as bool;
+  }
+
+  @protected
+  CatalogPackageDto dco_decode_box_autoadd_catalog_package_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_catalog_package_dto(raw);
+  }
+
+  @protected
+  double dco_decode_box_autoadd_f_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as double;
+  }
+
+  @protected
+  JobDto dco_decode_box_autoadd_job_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_job_dto(raw);
+  }
+
+  @protected
+  BridgeError dco_decode_bridge_error(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return BridgeError(
+      code: dco_decode_bridge_error_code(arr[0]),
+      message: dco_decode_String(arr[1]),
+      diagnosticId: dco_decode_String(arr[2]),
+    );
+  }
+
+  @protected
+  BridgeErrorCode dco_decode_bridge_error_code(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return BridgeErrorCode.values[raw as int];
+  }
+
+  @protected
+  CancelJobResult dco_decode_cancel_job_result(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return CancelJobResult.values[raw as int];
+  }
+
+  @protected
+  CatalogArtifactDto dco_decode_catalog_artifact_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return CatalogArtifactDto(
+      os: dco_decode_String(arr[0]),
+      architecture: dco_decode_String(arr[1]),
+      installer: dco_decode_String(arr[2]),
+      url: dco_decode_String(arr[3]),
+      sha256: dco_decode_String(arr[4]),
+      sizeBytes: dco_decode_u_64(arr[5]),
+      archiveRoot: dco_decode_String(arr[6]),
+      executableRelativePath: dco_decode_String(arr[7]),
+    );
+  }
+
+  @protected
+  CatalogDependencyDto dco_decode_catalog_dependency_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return CatalogDependencyDto(
+      packageId: dco_decode_String(arr[0]),
+      required_: dco_decode_bool(arr[1]),
+      policy: dco_decode_String(arr[2]),
+      version: dco_decode_opt_String(arr[3]),
+      channel: dco_decode_opt_String(arr[4]),
+    );
+  }
+
+  @protected
+  CatalogPackageDto dco_decode_catalog_package_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 12)
+      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
+    return CatalogPackageDto(
+      id: dco_decode_String(arr[0]),
+      name: dco_decode_String(arr[1]),
+      description: dco_decode_String(arr[2]),
+      publisher: dco_decode_String(arr[3]),
+      homepage: dco_decode_String(arr[4]),
+      category: dco_decode_String(arr[5]),
+      platforms: dco_decode_list_String(arr[6]),
+      defaultPolicy: dco_decode_String(arr[7]),
+      versions: dco_decode_list_catalog_version_dto(arr[8]),
+      license: dco_decode_String(arr[9]),
+      maintainer: dco_decode_String(arr[10]),
+      updatedAt: dco_decode_String(arr[11]),
+    );
+  }
+
+  @protected
+  CatalogProfileDto dco_decode_catalog_profile_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return CatalogProfileDto(
+      id: dco_decode_String(arr[0]),
+      name: dco_decode_String(arr[1]),
+      description: dco_decode_String(arr[2]),
+      maintainer: dco_decode_String(arr[3]),
+      platforms: dco_decode_list_String(arr[4]),
+      packages: dco_decode_list_catalog_profile_package_dto(arr[5]),
+    );
+  }
+
+  @protected
+  CatalogProfilePackageDto dco_decode_catalog_profile_package_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return CatalogProfilePackageDto(
+      packageId: dco_decode_String(arr[0]),
+      required_: dco_decode_bool(arr[1]),
+      policy: dco_decode_String(arr[2]),
+      version: dco_decode_opt_String(arr[3]),
+      channel: dco_decode_opt_String(arr[4]),
+      reason: dco_decode_String(arr[5]),
+    );
+  }
+
+  @protected
+  CatalogVersionDto dco_decode_catalog_version_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return CatalogVersionDto(
+      version: dco_decode_String(arr[0]),
+      channel: dco_decode_String(arr[1]),
+      releaseDate: dco_decode_opt_String(arr[2]),
+      releaseNotesUrl: dco_decode_opt_String(arr[3]),
+      dependencies: dco_decode_list_catalog_dependency_dto(arr[4]),
+      artifacts: dco_decode_list_catalog_artifact_dto(arr[5]),
+    );
+  }
+
+  @protected
+  EnginePathsInfo dco_decode_engine_paths_info(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return EnginePathsInfo(
+      managedRoot: dco_decode_String(arr[0]),
+      dbPath: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
+  double dco_decode_f_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as double;
+  }
+
+  @protected
+  int dco_decode_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  PlatformInt64 dco_decode_i_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeI64(raw);
+  }
+
+  @protected
+  InstalledPackageDto dco_decode_installed_package_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return InstalledPackageDto(
+      packageId: dco_decode_String(arr[0]),
+      name: dco_decode_String(arr[1]),
+      version: dco_decode_String(arr[2]),
+      status: dco_decode_String(arr[3]),
+      isActive: dco_decode_bool(arr[4]),
+      locationLabel: dco_decode_String(arr[5]),
+      installedAt: dco_decode_String(arr[6]),
+    );
+  }
+
+  @protected
+  InstalledVersionDto dco_decode_installed_version_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    return InstalledVersionDto(
+      packageId: dco_decode_String(arr[0]),
+      version: dco_decode_String(arr[1]),
+      status: dco_decode_String(arr[2]),
+      isActive: dco_decode_bool(arr[3]),
+      installPath: dco_decode_String(arr[4]),
+      installedAt: dco_decode_String(arr[5]),
+      fileCount: dco_decode_usize(arr[6]),
+      totalBytes: dco_decode_u_64(arr[7]),
+      entryPoint: dco_decode_opt_String(arr[8]),
+    );
+  }
+
+  @protected
+  JobDto dco_decode_job_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
+    return JobDto(
+      id: dco_decode_String(arr[0]),
+      packageId: dco_decode_opt_String(arr[1]),
+      packageName: dco_decode_opt_String(arr[2]),
+      version: dco_decode_opt_String(arr[3]),
+      state: dco_decode_String(arr[4]),
+      errorCode: dco_decode_opt_String(arr[5]),
+      createdAt: dco_decode_String(arr[6]),
+      updatedAt: dco_decode_String(arr[7]),
+      finishedAt: dco_decode_opt_String(arr[8]),
+      events: dco_decode_list_job_event_dto(arr[9]),
+      progress: dco_decode_opt_box_autoadd_f_64(arr[10]),
+    );
+  }
+
+  @protected
+  JobEventDto dco_decode_job_event_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return JobEventDto(
+      jobId: dco_decode_String(arr[0]),
+      seq: dco_decode_i_64(arr[1]),
+      timestamp: dco_decode_String(arr[2]),
+      stage: dco_decode_String(arr[3]),
+      progress: dco_decode_opt_box_autoadd_f_64(arr[4]),
+      message: dco_decode_String(arr[5]),
+      errorCode: dco_decode_opt_String(arr[6]),
+    );
+  }
+
+  @protected
   List<String> dco_decode_list_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_String).toList();
   }
 
   @protected
+  List<CatalogArtifactDto> dco_decode_list_catalog_artifact_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_catalog_artifact_dto).toList();
+  }
+
+  @protected
+  List<CatalogDependencyDto> dco_decode_list_catalog_dependency_dto(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_catalog_dependency_dto)
+        .toList();
+  }
+
+  @protected
+  List<CatalogPackageDto> dco_decode_list_catalog_package_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_catalog_package_dto).toList();
+  }
+
+  @protected
+  List<CatalogProfileDto> dco_decode_list_catalog_profile_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_catalog_profile_dto).toList();
+  }
+
+  @protected
+  List<CatalogProfilePackageDto> dco_decode_list_catalog_profile_package_dto(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_catalog_profile_package_dto)
+        .toList();
+  }
+
+  @protected
+  List<CatalogVersionDto> dco_decode_list_catalog_version_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_catalog_version_dto).toList();
+  }
+
+  @protected
+  List<InstalledPackageDto> dco_decode_list_installed_package_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_installed_package_dto)
+        .toList();
+  }
+
+  @protected
+  List<InstalledVersionDto> dco_decode_list_installed_version_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_installed_version_dto)
+        .toList();
+  }
+
+  @protected
+  List<JobDto> dco_decode_list_job_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_job_dto).toList();
+  }
+
+  @protected
+  List<JobEventDto> dco_decode_list_job_event_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_job_event_dto).toList();
+  }
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as Uint8List;
+  }
+
+  @protected
+  List<ShimPlanDto> dco_decode_list_shim_plan_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_shim_plan_dto).toList();
+  }
+
+  @protected
+  String? dco_decode_opt_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_String(raw);
+  }
+
+  @protected
+  CatalogPackageDto? dco_decode_opt_box_autoadd_catalog_package_dto(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_catalog_package_dto(raw);
+  }
+
+  @protected
+  double? dco_decode_opt_box_autoadd_f_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_f_64(raw);
+  }
+
+  @protected
+  JobDto? dco_decode_opt_box_autoadd_job_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_job_dto(raw);
+  }
+
+  @protected
+  PathChangeDto dco_decode_path_change_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return PathChangeDto(
+      kind: dco_decode_path_change_kind(arr[0]),
+      entry: dco_decode_opt_String(arr[1]),
+      reason: dco_decode_opt_String(arr[2]),
+    );
+  }
+
+  @protected
+  PathChangeKind dco_decode_path_change_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return PathChangeKind.values[raw as int];
+  }
+
+  @protected
+  RemovalResultDto dco_decode_removal_result_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return RemovalResultDto(
+      found: dco_decode_bool(arr[0]),
+      filesRemoved: dco_decode_usize(arr[1]),
+      clearedActive: dco_decode_bool(arr[2]),
+    );
+  }
+
+  @protected
+  ShimPlanDto dco_decode_shim_plan_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return ShimPlanDto(
+      shimRelativePath: dco_decode_String(arr[0]),
+      targetRelativePath: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
+  SyncCatalogStats dco_decode_sync_catalog_stats(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return SyncCatalogStats(
+      packagesUpdated: dco_decode_usize(arr[0]),
+      profilesUpdated: dco_decode_usize(arr[1]),
+      notModified: dco_decode_usize(arr[2]),
+      offline: dco_decode_usize(arr[3]),
+      failed: dco_decode_usize(arr[4]),
+    );
   }
 
   @protected
@@ -190,6 +1360,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  BigInt dco_decode_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeU64(raw);
+  }
+
+  @protected
   int dco_decode_u_8(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as int;
@@ -202,10 +1378,79 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  BigInt dco_decode_usize(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeU64(raw);
+  }
+
+  @protected
+  AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_String(deserializer);
+    return AnyhowException(inner);
+  }
+
+  @protected
+  RustStreamSink<JobEventDto> sse_decode_StreamSink_job_event_dto_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
+  RustStreamSink<List<JobDto>> sse_decode_StreamSink_list_job_dto_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_list_prim_u_8_strict(deserializer);
     return utf8.decoder.convert(inner);
+  }
+
+  @protected
+  ActivationOutcomeDto sse_decode_activation_outcome_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_packageId = sse_decode_String(deserializer);
+    var var_version = sse_decode_String(deserializer);
+    var var_previousActiveVersion = sse_decode_opt_String(deserializer);
+    var var_shimsWritten = sse_decode_usize(deserializer);
+    var var_pathChange = sse_decode_path_change_dto(deserializer);
+    return ActivationOutcomeDto(
+      packageId: var_packageId,
+      version: var_version,
+      previousActiveVersion: var_previousActiveVersion,
+      shimsWritten: var_shimsWritten,
+      pathChange: var_pathChange,
+    );
+  }
+
+  @protected
+  ActivationPlanDto sse_decode_activation_plan_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_packageId = sse_decode_String(deserializer);
+    var var_version = sse_decode_String(deserializer);
+    var var_previousActiveVersion = sse_decode_opt_String(deserializer);
+    var var_shims = sse_decode_list_shim_plan_dto(deserializer);
+    var var_shimsDirRelative = sse_decode_String(deserializer);
+    var var_pathChange = sse_decode_path_change_dto(deserializer);
+    return ActivationPlanDto(
+      packageId: var_packageId,
+      version: var_version,
+      previousActiveVersion: var_previousActiveVersion,
+      shims: var_shims,
+      shimsDirRelative: var_shimsDirRelative,
+      pathChange: var_pathChange,
+    );
   }
 
   @protected
@@ -214,6 +1459,327 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_version = sse_decode_String(deserializer);
     var var_engineName = sse_decode_String(deserializer);
     return AppInfo(version: var_version, engineName: var_engineName);
+  }
+
+  @protected
+  bool sse_decode_bool(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint8() != 0;
+  }
+
+  @protected
+  CatalogPackageDto sse_decode_box_autoadd_catalog_package_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_catalog_package_dto(deserializer));
+  }
+
+  @protected
+  double sse_decode_box_autoadd_f_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_f_64(deserializer));
+  }
+
+  @protected
+  JobDto sse_decode_box_autoadd_job_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_job_dto(deserializer));
+  }
+
+  @protected
+  BridgeError sse_decode_bridge_error(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_code = sse_decode_bridge_error_code(deserializer);
+    var var_message = sse_decode_String(deserializer);
+    var var_diagnosticId = sse_decode_String(deserializer);
+    return BridgeError(
+      code: var_code,
+      message: var_message,
+      diagnosticId: var_diagnosticId,
+    );
+  }
+
+  @protected
+  BridgeErrorCode sse_decode_bridge_error_code(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return BridgeErrorCode.values[inner];
+  }
+
+  @protected
+  CancelJobResult sse_decode_cancel_job_result(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return CancelJobResult.values[inner];
+  }
+
+  @protected
+  CatalogArtifactDto sse_decode_catalog_artifact_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_os = sse_decode_String(deserializer);
+    var var_architecture = sse_decode_String(deserializer);
+    var var_installer = sse_decode_String(deserializer);
+    var var_url = sse_decode_String(deserializer);
+    var var_sha256 = sse_decode_String(deserializer);
+    var var_sizeBytes = sse_decode_u_64(deserializer);
+    var var_archiveRoot = sse_decode_String(deserializer);
+    var var_executableRelativePath = sse_decode_String(deserializer);
+    return CatalogArtifactDto(
+      os: var_os,
+      architecture: var_architecture,
+      installer: var_installer,
+      url: var_url,
+      sha256: var_sha256,
+      sizeBytes: var_sizeBytes,
+      archiveRoot: var_archiveRoot,
+      executableRelativePath: var_executableRelativePath,
+    );
+  }
+
+  @protected
+  CatalogDependencyDto sse_decode_catalog_dependency_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_packageId = sse_decode_String(deserializer);
+    var var_required_ = sse_decode_bool(deserializer);
+    var var_policy = sse_decode_String(deserializer);
+    var var_version = sse_decode_opt_String(deserializer);
+    var var_channel = sse_decode_opt_String(deserializer);
+    return CatalogDependencyDto(
+      packageId: var_packageId,
+      required_: var_required_,
+      policy: var_policy,
+      version: var_version,
+      channel: var_channel,
+    );
+  }
+
+  @protected
+  CatalogPackageDto sse_decode_catalog_package_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_description = sse_decode_String(deserializer);
+    var var_publisher = sse_decode_String(deserializer);
+    var var_homepage = sse_decode_String(deserializer);
+    var var_category = sse_decode_String(deserializer);
+    var var_platforms = sse_decode_list_String(deserializer);
+    var var_defaultPolicy = sse_decode_String(deserializer);
+    var var_versions = sse_decode_list_catalog_version_dto(deserializer);
+    var var_license = sse_decode_String(deserializer);
+    var var_maintainer = sse_decode_String(deserializer);
+    var var_updatedAt = sse_decode_String(deserializer);
+    return CatalogPackageDto(
+      id: var_id,
+      name: var_name,
+      description: var_description,
+      publisher: var_publisher,
+      homepage: var_homepage,
+      category: var_category,
+      platforms: var_platforms,
+      defaultPolicy: var_defaultPolicy,
+      versions: var_versions,
+      license: var_license,
+      maintainer: var_maintainer,
+      updatedAt: var_updatedAt,
+    );
+  }
+
+  @protected
+  CatalogProfileDto sse_decode_catalog_profile_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_description = sse_decode_String(deserializer);
+    var var_maintainer = sse_decode_String(deserializer);
+    var var_platforms = sse_decode_list_String(deserializer);
+    var var_packages = sse_decode_list_catalog_profile_package_dto(
+      deserializer,
+    );
+    return CatalogProfileDto(
+      id: var_id,
+      name: var_name,
+      description: var_description,
+      maintainer: var_maintainer,
+      platforms: var_platforms,
+      packages: var_packages,
+    );
+  }
+
+  @protected
+  CatalogProfilePackageDto sse_decode_catalog_profile_package_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_packageId = sse_decode_String(deserializer);
+    var var_required_ = sse_decode_bool(deserializer);
+    var var_policy = sse_decode_String(deserializer);
+    var var_version = sse_decode_opt_String(deserializer);
+    var var_channel = sse_decode_opt_String(deserializer);
+    var var_reason = sse_decode_String(deserializer);
+    return CatalogProfilePackageDto(
+      packageId: var_packageId,
+      required_: var_required_,
+      policy: var_policy,
+      version: var_version,
+      channel: var_channel,
+      reason: var_reason,
+    );
+  }
+
+  @protected
+  CatalogVersionDto sse_decode_catalog_version_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_version = sse_decode_String(deserializer);
+    var var_channel = sse_decode_String(deserializer);
+    var var_releaseDate = sse_decode_opt_String(deserializer);
+    var var_releaseNotesUrl = sse_decode_opt_String(deserializer);
+    var var_dependencies = sse_decode_list_catalog_dependency_dto(deserializer);
+    var var_artifacts = sse_decode_list_catalog_artifact_dto(deserializer);
+    return CatalogVersionDto(
+      version: var_version,
+      channel: var_channel,
+      releaseDate: var_releaseDate,
+      releaseNotesUrl: var_releaseNotesUrl,
+      dependencies: var_dependencies,
+      artifacts: var_artifacts,
+    );
+  }
+
+  @protected
+  EnginePathsInfo sse_decode_engine_paths_info(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_managedRoot = sse_decode_String(deserializer);
+    var var_dbPath = sse_decode_String(deserializer);
+    return EnginePathsInfo(managedRoot: var_managedRoot, dbPath: var_dbPath);
+  }
+
+  @protected
+  double sse_decode_f_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getFloat64();
+  }
+
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getInt32();
+  }
+
+  @protected
+  PlatformInt64 sse_decode_i_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getPlatformInt64();
+  }
+
+  @protected
+  InstalledPackageDto sse_decode_installed_package_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_packageId = sse_decode_String(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_version = sse_decode_String(deserializer);
+    var var_status = sse_decode_String(deserializer);
+    var var_isActive = sse_decode_bool(deserializer);
+    var var_locationLabel = sse_decode_String(deserializer);
+    var var_installedAt = sse_decode_String(deserializer);
+    return InstalledPackageDto(
+      packageId: var_packageId,
+      name: var_name,
+      version: var_version,
+      status: var_status,
+      isActive: var_isActive,
+      locationLabel: var_locationLabel,
+      installedAt: var_installedAt,
+    );
+  }
+
+  @protected
+  InstalledVersionDto sse_decode_installed_version_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_packageId = sse_decode_String(deserializer);
+    var var_version = sse_decode_String(deserializer);
+    var var_status = sse_decode_String(deserializer);
+    var var_isActive = sse_decode_bool(deserializer);
+    var var_installPath = sse_decode_String(deserializer);
+    var var_installedAt = sse_decode_String(deserializer);
+    var var_fileCount = sse_decode_usize(deserializer);
+    var var_totalBytes = sse_decode_u_64(deserializer);
+    var var_entryPoint = sse_decode_opt_String(deserializer);
+    return InstalledVersionDto(
+      packageId: var_packageId,
+      version: var_version,
+      status: var_status,
+      isActive: var_isActive,
+      installPath: var_installPath,
+      installedAt: var_installedAt,
+      fileCount: var_fileCount,
+      totalBytes: var_totalBytes,
+      entryPoint: var_entryPoint,
+    );
+  }
+
+  @protected
+  JobDto sse_decode_job_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_packageId = sse_decode_opt_String(deserializer);
+    var var_packageName = sse_decode_opt_String(deserializer);
+    var var_version = sse_decode_opt_String(deserializer);
+    var var_state = sse_decode_String(deserializer);
+    var var_errorCode = sse_decode_opt_String(deserializer);
+    var var_createdAt = sse_decode_String(deserializer);
+    var var_updatedAt = sse_decode_String(deserializer);
+    var var_finishedAt = sse_decode_opt_String(deserializer);
+    var var_events = sse_decode_list_job_event_dto(deserializer);
+    var var_progress = sse_decode_opt_box_autoadd_f_64(deserializer);
+    return JobDto(
+      id: var_id,
+      packageId: var_packageId,
+      packageName: var_packageName,
+      version: var_version,
+      state: var_state,
+      errorCode: var_errorCode,
+      createdAt: var_createdAt,
+      updatedAt: var_updatedAt,
+      finishedAt: var_finishedAt,
+      events: var_events,
+      progress: var_progress,
+    );
+  }
+
+  @protected
+  JobEventDto sse_decode_job_event_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_jobId = sse_decode_String(deserializer);
+    var var_seq = sse_decode_i_64(deserializer);
+    var var_timestamp = sse_decode_String(deserializer);
+    var var_stage = sse_decode_String(deserializer);
+    var var_progress = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_message = sse_decode_String(deserializer);
+    var var_errorCode = sse_decode_opt_String(deserializer);
+    return JobEventDto(
+      jobId: var_jobId,
+      seq: var_seq,
+      timestamp: var_timestamp,
+      stage: var_stage,
+      progress: var_progress,
+      message: var_message,
+      errorCode: var_errorCode,
+    );
   }
 
   @protected
@@ -229,10 +1795,265 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<CatalogArtifactDto> sse_decode_list_catalog_artifact_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <CatalogArtifactDto>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_catalog_artifact_dto(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<CatalogDependencyDto> sse_decode_list_catalog_dependency_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <CatalogDependencyDto>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_catalog_dependency_dto(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<CatalogPackageDto> sse_decode_list_catalog_package_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <CatalogPackageDto>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_catalog_package_dto(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<CatalogProfileDto> sse_decode_list_catalog_profile_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <CatalogProfileDto>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_catalog_profile_dto(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<CatalogProfilePackageDto> sse_decode_list_catalog_profile_package_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <CatalogProfilePackageDto>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_catalog_profile_package_dto(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<CatalogVersionDto> sse_decode_list_catalog_version_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <CatalogVersionDto>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_catalog_version_dto(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<InstalledPackageDto> sse_decode_list_installed_package_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <InstalledPackageDto>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_installed_package_dto(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<InstalledVersionDto> sse_decode_list_installed_version_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <InstalledVersionDto>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_installed_version_dto(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<JobDto> sse_decode_list_job_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <JobDto>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_job_dto(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<JobEventDto> sse_decode_list_job_event_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <JobEventDto>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_job_event_dto(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
     return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  List<ShimPlanDto> sse_decode_list_shim_plan_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ShimPlanDto>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_shim_plan_dto(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_String(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  CatalogPackageDto? sse_decode_opt_box_autoadd_catalog_package_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_catalog_package_dto(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_f_64(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  JobDto? sse_decode_opt_box_autoadd_job_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_job_dto(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  PathChangeDto sse_decode_path_change_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_path_change_kind(deserializer);
+    var var_entry = sse_decode_opt_String(deserializer);
+    var var_reason = sse_decode_opt_String(deserializer);
+    return PathChangeDto(kind: var_kind, entry: var_entry, reason: var_reason);
+  }
+
+  @protected
+  PathChangeKind sse_decode_path_change_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return PathChangeKind.values[inner];
+  }
+
+  @protected
+  RemovalResultDto sse_decode_removal_result_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_found = sse_decode_bool(deserializer);
+    var var_filesRemoved = sse_decode_usize(deserializer);
+    var var_clearedActive = sse_decode_bool(deserializer);
+    return RemovalResultDto(
+      found: var_found,
+      filesRemoved: var_filesRemoved,
+      clearedActive: var_clearedActive,
+    );
+  }
+
+  @protected
+  ShimPlanDto sse_decode_shim_plan_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_shimRelativePath = sse_decode_String(deserializer);
+    var var_targetRelativePath = sse_decode_String(deserializer);
+    return ShimPlanDto(
+      shimRelativePath: var_shimRelativePath,
+      targetRelativePath: var_targetRelativePath,
+    );
+  }
+
+  @protected
+  SyncCatalogStats sse_decode_sync_catalog_stats(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_packagesUpdated = sse_decode_usize(deserializer);
+    var var_profilesUpdated = sse_decode_usize(deserializer);
+    var var_notModified = sse_decode_usize(deserializer);
+    var var_offline = sse_decode_usize(deserializer);
+    var var_failed = sse_decode_usize(deserializer);
+    return SyncCatalogStats(
+      packagesUpdated: var_packagesUpdated,
+      profilesUpdated: var_profilesUpdated,
+      notModified: var_notModified,
+      offline: var_offline,
+      failed: var_failed,
+    );
   }
 
   @protected
@@ -249,6 +2070,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  BigInt sse_decode_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getBigUint64();
+  }
+
+  @protected
   int sse_decode_u_8(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getUint8();
@@ -260,21 +2087,85 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  int sse_decode_i_32(SseDeserializer deserializer) {
+  BigInt sse_decode_usize(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    return deserializer.buffer.getInt32();
+    return deserializer.buffer.getBigUint64();
   }
 
   @protected
-  bool sse_decode_bool(SseDeserializer deserializer) {
+  void sse_encode_AnyhowException(
+    AnyhowException self,
+    SseSerializer serializer,
+  ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    return deserializer.buffer.getUint8() != 0;
+    sse_encode_String(self.message, serializer);
+  }
+
+  @protected
+  void sse_encode_StreamSink_job_event_dto_Sse(
+    RustStreamSink<JobEventDto> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_job_event_dto,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_StreamSink_list_job_dto_Sse(
+    RustStreamSink<List<JobDto>> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_job_dto,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
   }
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_prim_u_8_strict(utf8.encoder.convert(self), serializer);
+  }
+
+  @protected
+  void sse_encode_activation_outcome_dto(
+    ActivationOutcomeDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.packageId, serializer);
+    sse_encode_String(self.version, serializer);
+    sse_encode_opt_String(self.previousActiveVersion, serializer);
+    sse_encode_usize(self.shimsWritten, serializer);
+    sse_encode_path_change_dto(self.pathChange, serializer);
+  }
+
+  @protected
+  void sse_encode_activation_plan_dto(
+    ActivationPlanDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.packageId, serializer);
+    sse_encode_String(self.version, serializer);
+    sse_encode_opt_String(self.previousActiveVersion, serializer);
+    sse_encode_list_shim_plan_dto(self.shims, serializer);
+    sse_encode_String(self.shimsDirRelative, serializer);
+    sse_encode_path_change_dto(self.pathChange, serializer);
   }
 
   @protected
@@ -285,11 +2176,360 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_bool(bool self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint8(self ? 1 : 0);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_catalog_package_dto(
+    CatalogPackageDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_catalog_package_dto(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_64(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_job_dto(JobDto self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_job_dto(self, serializer);
+  }
+
+  @protected
+  void sse_encode_bridge_error(BridgeError self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bridge_error_code(self.code, serializer);
+    sse_encode_String(self.message, serializer);
+    sse_encode_String(self.diagnosticId, serializer);
+  }
+
+  @protected
+  void sse_encode_bridge_error_code(
+    BridgeErrorCode self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_cancel_job_result(
+    CancelJobResult self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_catalog_artifact_dto(
+    CatalogArtifactDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.os, serializer);
+    sse_encode_String(self.architecture, serializer);
+    sse_encode_String(self.installer, serializer);
+    sse_encode_String(self.url, serializer);
+    sse_encode_String(self.sha256, serializer);
+    sse_encode_u_64(self.sizeBytes, serializer);
+    sse_encode_String(self.archiveRoot, serializer);
+    sse_encode_String(self.executableRelativePath, serializer);
+  }
+
+  @protected
+  void sse_encode_catalog_dependency_dto(
+    CatalogDependencyDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.packageId, serializer);
+    sse_encode_bool(self.required_, serializer);
+    sse_encode_String(self.policy, serializer);
+    sse_encode_opt_String(self.version, serializer);
+    sse_encode_opt_String(self.channel, serializer);
+  }
+
+  @protected
+  void sse_encode_catalog_package_dto(
+    CatalogPackageDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_String(self.description, serializer);
+    sse_encode_String(self.publisher, serializer);
+    sse_encode_String(self.homepage, serializer);
+    sse_encode_String(self.category, serializer);
+    sse_encode_list_String(self.platforms, serializer);
+    sse_encode_String(self.defaultPolicy, serializer);
+    sse_encode_list_catalog_version_dto(self.versions, serializer);
+    sse_encode_String(self.license, serializer);
+    sse_encode_String(self.maintainer, serializer);
+    sse_encode_String(self.updatedAt, serializer);
+  }
+
+  @protected
+  void sse_encode_catalog_profile_dto(
+    CatalogProfileDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_String(self.description, serializer);
+    sse_encode_String(self.maintainer, serializer);
+    sse_encode_list_String(self.platforms, serializer);
+    sse_encode_list_catalog_profile_package_dto(self.packages, serializer);
+  }
+
+  @protected
+  void sse_encode_catalog_profile_package_dto(
+    CatalogProfilePackageDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.packageId, serializer);
+    sse_encode_bool(self.required_, serializer);
+    sse_encode_String(self.policy, serializer);
+    sse_encode_opt_String(self.version, serializer);
+    sse_encode_opt_String(self.channel, serializer);
+    sse_encode_String(self.reason, serializer);
+  }
+
+  @protected
+  void sse_encode_catalog_version_dto(
+    CatalogVersionDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.version, serializer);
+    sse_encode_String(self.channel, serializer);
+    sse_encode_opt_String(self.releaseDate, serializer);
+    sse_encode_opt_String(self.releaseNotesUrl, serializer);
+    sse_encode_list_catalog_dependency_dto(self.dependencies, serializer);
+    sse_encode_list_catalog_artifact_dto(self.artifacts, serializer);
+  }
+
+  @protected
+  void sse_encode_engine_paths_info(
+    EnginePathsInfo self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.managedRoot, serializer);
+    sse_encode_String(self.dbPath, serializer);
+  }
+
+  @protected
+  void sse_encode_f_64(double self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putFloat64(self);
+  }
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putInt32(self);
+  }
+
+  @protected
+  void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putPlatformInt64(self);
+  }
+
+  @protected
+  void sse_encode_installed_package_dto(
+    InstalledPackageDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.packageId, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_String(self.version, serializer);
+    sse_encode_String(self.status, serializer);
+    sse_encode_bool(self.isActive, serializer);
+    sse_encode_String(self.locationLabel, serializer);
+    sse_encode_String(self.installedAt, serializer);
+  }
+
+  @protected
+  void sse_encode_installed_version_dto(
+    InstalledVersionDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.packageId, serializer);
+    sse_encode_String(self.version, serializer);
+    sse_encode_String(self.status, serializer);
+    sse_encode_bool(self.isActive, serializer);
+    sse_encode_String(self.installPath, serializer);
+    sse_encode_String(self.installedAt, serializer);
+    sse_encode_usize(self.fileCount, serializer);
+    sse_encode_u_64(self.totalBytes, serializer);
+    sse_encode_opt_String(self.entryPoint, serializer);
+  }
+
+  @protected
+  void sse_encode_job_dto(JobDto self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_opt_String(self.packageId, serializer);
+    sse_encode_opt_String(self.packageName, serializer);
+    sse_encode_opt_String(self.version, serializer);
+    sse_encode_String(self.state, serializer);
+    sse_encode_opt_String(self.errorCode, serializer);
+    sse_encode_String(self.createdAt, serializer);
+    sse_encode_String(self.updatedAt, serializer);
+    sse_encode_opt_String(self.finishedAt, serializer);
+    sse_encode_list_job_event_dto(self.events, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.progress, serializer);
+  }
+
+  @protected
+  void sse_encode_job_event_dto(JobEventDto self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.jobId, serializer);
+    sse_encode_i_64(self.seq, serializer);
+    sse_encode_String(self.timestamp, serializer);
+    sse_encode_String(self.stage, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.progress, serializer);
+    sse_encode_String(self.message, serializer);
+    sse_encode_opt_String(self.errorCode, serializer);
+  }
+
+  @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_String(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_catalog_artifact_dto(
+    List<CatalogArtifactDto> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_catalog_artifact_dto(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_catalog_dependency_dto(
+    List<CatalogDependencyDto> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_catalog_dependency_dto(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_catalog_package_dto(
+    List<CatalogPackageDto> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_catalog_package_dto(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_catalog_profile_dto(
+    List<CatalogProfileDto> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_catalog_profile_dto(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_catalog_profile_package_dto(
+    List<CatalogProfilePackageDto> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_catalog_profile_package_dto(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_catalog_version_dto(
+    List<CatalogVersionDto> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_catalog_version_dto(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_installed_package_dto(
+    List<InstalledPackageDto> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_installed_package_dto(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_installed_version_dto(
+    List<InstalledVersionDto> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_installed_version_dto(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_job_dto(List<JobDto> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_job_dto(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_job_event_dto(
+    List<JobEventDto> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_job_event_dto(item, serializer);
     }
   }
 
@@ -304,11 +2544,126 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_shim_plan_dto(
+    List<ShimPlanDto> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_shim_plan_dto(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_String(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_catalog_package_dto(
+    CatalogPackageDto? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_catalog_package_dto(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_f_64(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_job_dto(
+    JobDto? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_job_dto(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_path_change_dto(
+    PathChangeDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_path_change_kind(self.kind, serializer);
+    sse_encode_opt_String(self.entry, serializer);
+    sse_encode_opt_String(self.reason, serializer);
+  }
+
+  @protected
+  void sse_encode_path_change_kind(
+    PathChangeKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_removal_result_dto(
+    RemovalResultDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.found, serializer);
+    sse_encode_usize(self.filesRemoved, serializer);
+    sse_encode_bool(self.clearedActive, serializer);
+  }
+
+  @protected
+  void sse_encode_shim_plan_dto(ShimPlanDto self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.shimRelativePath, serializer);
+    sse_encode_String(self.targetRelativePath, serializer);
+  }
+
+  @protected
+  void sse_encode_sync_catalog_stats(
+    SyncCatalogStats self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(self.packagesUpdated, serializer);
+    sse_encode_usize(self.profilesUpdated, serializer);
+    sse_encode_usize(self.notModified, serializer);
+    sse_encode_usize(self.offline, serializer);
+    sse_encode_usize(self.failed, serializer);
+  }
+
+  @protected
   void sse_encode_system_info(SystemInfo self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.os, serializer);
     sse_encode_String(self.arch, serializer);
     sse_encode_list_String(self.capabilities, serializer);
+  }
+
+  @protected
+  void sse_encode_u_64(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putBigUint64(self);
   }
 
   @protected
@@ -323,14 +2678,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  void sse_encode_i_32(int self, SseSerializer serializer) {
+  void sse_encode_usize(BigInt self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    serializer.buffer.putInt32(self);
-  }
-
-  @protected
-  void sse_encode_bool(bool self, SseSerializer serializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    serializer.buffer.putUint8(self ? 1 : 0);
+    serializer.buffer.putBigUint64(self);
   }
 }

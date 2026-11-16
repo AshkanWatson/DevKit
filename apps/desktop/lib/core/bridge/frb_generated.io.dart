@@ -4,6 +4,12 @@
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
 import 'api.dart';
+import 'api/catalog.dart';
+import 'api/engine.dart';
+import 'api/error.dart';
+import 'api/installed.dart';
+import 'api/jobs.dart';
+import 'api/simple.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -22,19 +28,170 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   });
 
   @protected
+  AnyhowException dco_decode_AnyhowException(dynamic raw);
+
+  @protected
+  RustStreamSink<JobEventDto> dco_decode_StreamSink_job_event_dto_Sse(
+    dynamic raw,
+  );
+
+  @protected
+  RustStreamSink<List<JobDto>> dco_decode_StreamSink_list_job_dto_Sse(
+    dynamic raw,
+  );
+
+  @protected
   String dco_decode_String(dynamic raw);
+
+  @protected
+  ActivationOutcomeDto dco_decode_activation_outcome_dto(dynamic raw);
+
+  @protected
+  ActivationPlanDto dco_decode_activation_plan_dto(dynamic raw);
 
   @protected
   AppInfo dco_decode_app_info(dynamic raw);
 
   @protected
+  bool dco_decode_bool(dynamic raw);
+
+  @protected
+  CatalogPackageDto dco_decode_box_autoadd_catalog_package_dto(dynamic raw);
+
+  @protected
+  double dco_decode_box_autoadd_f_64(dynamic raw);
+
+  @protected
+  JobDto dco_decode_box_autoadd_job_dto(dynamic raw);
+
+  @protected
+  BridgeError dco_decode_bridge_error(dynamic raw);
+
+  @protected
+  BridgeErrorCode dco_decode_bridge_error_code(dynamic raw);
+
+  @protected
+  CancelJobResult dco_decode_cancel_job_result(dynamic raw);
+
+  @protected
+  CatalogArtifactDto dco_decode_catalog_artifact_dto(dynamic raw);
+
+  @protected
+  CatalogDependencyDto dco_decode_catalog_dependency_dto(dynamic raw);
+
+  @protected
+  CatalogPackageDto dco_decode_catalog_package_dto(dynamic raw);
+
+  @protected
+  CatalogProfileDto dco_decode_catalog_profile_dto(dynamic raw);
+
+  @protected
+  CatalogProfilePackageDto dco_decode_catalog_profile_package_dto(dynamic raw);
+
+  @protected
+  CatalogVersionDto dco_decode_catalog_version_dto(dynamic raw);
+
+  @protected
+  EnginePathsInfo dco_decode_engine_paths_info(dynamic raw);
+
+  @protected
+  double dco_decode_f_64(dynamic raw);
+
+  @protected
+  int dco_decode_i_32(dynamic raw);
+
+  @protected
+  PlatformInt64 dco_decode_i_64(dynamic raw);
+
+  @protected
+  InstalledPackageDto dco_decode_installed_package_dto(dynamic raw);
+
+  @protected
+  InstalledVersionDto dco_decode_installed_version_dto(dynamic raw);
+
+  @protected
+  JobDto dco_decode_job_dto(dynamic raw);
+
+  @protected
+  JobEventDto dco_decode_job_event_dto(dynamic raw);
+
+  @protected
   List<String> dco_decode_list_String(dynamic raw);
+
+  @protected
+  List<CatalogArtifactDto> dco_decode_list_catalog_artifact_dto(dynamic raw);
+
+  @protected
+  List<CatalogDependencyDto> dco_decode_list_catalog_dependency_dto(
+    dynamic raw,
+  );
+
+  @protected
+  List<CatalogPackageDto> dco_decode_list_catalog_package_dto(dynamic raw);
+
+  @protected
+  List<CatalogProfileDto> dco_decode_list_catalog_profile_dto(dynamic raw);
+
+  @protected
+  List<CatalogProfilePackageDto> dco_decode_list_catalog_profile_package_dto(
+    dynamic raw,
+  );
+
+  @protected
+  List<CatalogVersionDto> dco_decode_list_catalog_version_dto(dynamic raw);
+
+  @protected
+  List<InstalledPackageDto> dco_decode_list_installed_package_dto(dynamic raw);
+
+  @protected
+  List<InstalledVersionDto> dco_decode_list_installed_version_dto(dynamic raw);
+
+  @protected
+  List<JobDto> dco_decode_list_job_dto(dynamic raw);
+
+  @protected
+  List<JobEventDto> dco_decode_list_job_event_dto(dynamic raw);
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
+  List<ShimPlanDto> dco_decode_list_shim_plan_dto(dynamic raw);
+
+  @protected
+  String? dco_decode_opt_String(dynamic raw);
+
+  @protected
+  CatalogPackageDto? dco_decode_opt_box_autoadd_catalog_package_dto(
+    dynamic raw,
+  );
+
+  @protected
+  double? dco_decode_opt_box_autoadd_f_64(dynamic raw);
+
+  @protected
+  JobDto? dco_decode_opt_box_autoadd_job_dto(dynamic raw);
+
+  @protected
+  PathChangeDto dco_decode_path_change_dto(dynamic raw);
+
+  @protected
+  PathChangeKind dco_decode_path_change_kind(dynamic raw);
+
+  @protected
+  RemovalResultDto dco_decode_removal_result_dto(dynamic raw);
+
+  @protected
+  ShimPlanDto dco_decode_shim_plan_dto(dynamic raw);
+
+  @protected
+  SyncCatalogStats dco_decode_sync_catalog_stats(dynamic raw);
+
+  @protected
   SystemInfo dco_decode_system_info(dynamic raw);
+
+  @protected
+  BigInt dco_decode_u_64(dynamic raw);
 
   @protected
   int dco_decode_u_8(dynamic raw);
@@ -43,19 +200,207 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void dco_decode_unit(dynamic raw);
 
   @protected
+  BigInt dco_decode_usize(dynamic raw);
+
+  @protected
+  AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
+
+  @protected
+  RustStreamSink<JobEventDto> sse_decode_StreamSink_job_event_dto_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  RustStreamSink<List<JobDto>> sse_decode_StreamSink_list_job_dto_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer);
+
+  @protected
+  ActivationOutcomeDto sse_decode_activation_outcome_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ActivationPlanDto sse_decode_activation_plan_dto(
+    SseDeserializer deserializer,
+  );
 
   @protected
   AppInfo sse_decode_app_info(SseDeserializer deserializer);
 
   @protected
+  bool sse_decode_bool(SseDeserializer deserializer);
+
+  @protected
+  CatalogPackageDto sse_decode_box_autoadd_catalog_package_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  double sse_decode_box_autoadd_f_64(SseDeserializer deserializer);
+
+  @protected
+  JobDto sse_decode_box_autoadd_job_dto(SseDeserializer deserializer);
+
+  @protected
+  BridgeError sse_decode_bridge_error(SseDeserializer deserializer);
+
+  @protected
+  BridgeErrorCode sse_decode_bridge_error_code(SseDeserializer deserializer);
+
+  @protected
+  CancelJobResult sse_decode_cancel_job_result(SseDeserializer deserializer);
+
+  @protected
+  CatalogArtifactDto sse_decode_catalog_artifact_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CatalogDependencyDto sse_decode_catalog_dependency_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CatalogPackageDto sse_decode_catalog_package_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CatalogProfileDto sse_decode_catalog_profile_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CatalogProfilePackageDto sse_decode_catalog_profile_package_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  CatalogVersionDto sse_decode_catalog_version_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  EnginePathsInfo sse_decode_engine_paths_info(SseDeserializer deserializer);
+
+  @protected
+  double sse_decode_f_64(SseDeserializer deserializer);
+
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer);
+
+  @protected
+  PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
+
+  @protected
+  InstalledPackageDto sse_decode_installed_package_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  InstalledVersionDto sse_decode_installed_version_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  JobDto sse_decode_job_dto(SseDeserializer deserializer);
+
+  @protected
+  JobEventDto sse_decode_job_event_dto(SseDeserializer deserializer);
+
+  @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+  @protected
+  List<CatalogArtifactDto> sse_decode_list_catalog_artifact_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CatalogDependencyDto> sse_decode_list_catalog_dependency_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CatalogPackageDto> sse_decode_list_catalog_package_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CatalogProfileDto> sse_decode_list_catalog_profile_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CatalogProfilePackageDto> sse_decode_list_catalog_profile_package_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<CatalogVersionDto> sse_decode_list_catalog_version_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<InstalledPackageDto> sse_decode_list_installed_package_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<InstalledVersionDto> sse_decode_list_installed_version_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<JobDto> sse_decode_list_job_dto(SseDeserializer deserializer);
+
+  @protected
+  List<JobEventDto> sse_decode_list_job_event_dto(SseDeserializer deserializer);
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
+  List<ShimPlanDto> sse_decode_list_shim_plan_dto(SseDeserializer deserializer);
+
+  @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
+  CatalogPackageDto? sse_decode_opt_box_autoadd_catalog_package_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer);
+
+  @protected
+  JobDto? sse_decode_opt_box_autoadd_job_dto(SseDeserializer deserializer);
+
+  @protected
+  PathChangeDto sse_decode_path_change_dto(SseDeserializer deserializer);
+
+  @protected
+  PathChangeKind sse_decode_path_change_kind(SseDeserializer deserializer);
+
+  @protected
+  RemovalResultDto sse_decode_removal_result_dto(SseDeserializer deserializer);
+
+  @protected
+  ShimPlanDto sse_decode_shim_plan_dto(SseDeserializer deserializer);
+
+  @protected
+  SyncCatalogStats sse_decode_sync_catalog_stats(SseDeserializer deserializer);
+
+  @protected
   SystemInfo sse_decode_system_info(SseDeserializer deserializer);
+
+  @protected
+  BigInt sse_decode_u_64(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_8(SseDeserializer deserializer);
@@ -64,19 +409,202 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_decode_unit(SseDeserializer deserializer);
 
   @protected
-  int sse_decode_i_32(SseDeserializer deserializer);
+  BigInt sse_decode_usize(SseDeserializer deserializer);
 
   @protected
-  bool sse_decode_bool(SseDeserializer deserializer);
+  void sse_encode_AnyhowException(
+    AnyhowException self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_StreamSink_job_event_dto_Sse(
+    RustStreamSink<JobEventDto> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_StreamSink_list_job_dto_Sse(
+    RustStreamSink<List<JobDto>> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
+  void sse_encode_activation_outcome_dto(
+    ActivationOutcomeDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_activation_plan_dto(
+    ActivationPlanDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_app_info(AppInfo self, SseSerializer serializer);
 
   @protected
+  void sse_encode_bool(bool self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_catalog_package_dto(
+    CatalogPackageDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_job_dto(JobDto self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_bridge_error(BridgeError self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_bridge_error_code(
+    BridgeErrorCode self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_cancel_job_result(
+    CancelJobResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_catalog_artifact_dto(
+    CatalogArtifactDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_catalog_dependency_dto(
+    CatalogDependencyDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_catalog_package_dto(
+    CatalogPackageDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_catalog_profile_dto(
+    CatalogProfileDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_catalog_profile_package_dto(
+    CatalogProfilePackageDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_catalog_version_dto(
+    CatalogVersionDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_engine_paths_info(
+    EnginePathsInfo self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_f_64(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_installed_package_dto(
+    InstalledPackageDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_installed_version_dto(
+    InstalledVersionDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_job_dto(JobDto self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_job_event_dto(JobEventDto self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_catalog_artifact_dto(
+    List<CatalogArtifactDto> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_catalog_dependency_dto(
+    List<CatalogDependencyDto> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_catalog_package_dto(
+    List<CatalogPackageDto> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_catalog_profile_dto(
+    List<CatalogProfileDto> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_catalog_profile_package_dto(
+    List<CatalogProfilePackageDto> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_catalog_version_dto(
+    List<CatalogVersionDto> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_installed_package_dto(
+    List<InstalledPackageDto> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_installed_version_dto(
+    List<InstalledVersionDto> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_job_dto(List<JobDto> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_job_event_dto(
+    List<JobEventDto> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_prim_u_8_strict(
@@ -85,7 +613,58 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_shim_plan_dto(
+    List<ShimPlanDto> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_catalog_package_dto(
+    CatalogPackageDto? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_job_dto(
+    JobDto? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_path_change_dto(PathChangeDto self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_path_change_kind(
+    PathChangeKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_removal_result_dto(
+    RemovalResultDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_shim_plan_dto(ShimPlanDto self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_sync_catalog_stats(
+    SyncCatalogStats self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_system_info(SystemInfo self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_u_64(BigInt self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_8(int self, SseSerializer serializer);
@@ -94,10 +673,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_unit(void self, SseSerializer serializer);
 
   @protected
-  void sse_encode_i_32(int self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_bool(bool self, SseSerializer serializer);
+  void sse_encode_usize(BigInt self, SseSerializer serializer);
 }
 
 // Section: wire_class

@@ -70,7 +70,7 @@ class FixtureCatalogRepository implements CatalogRepository {
             // Manifests do not guarantee ordering; normalize to newest-first so
             // "latest" resolves to the newest listed version and "stable" to
             // the newest non-prerelease.
-            ..sort((a, b) => _compareVersionsDesc(a, b)),
+            ..sort((a, b) => compareVersionsDesc(a, b)),
       license: map['license_expression'] as String? ?? '',
       updatedAt: map['updated_at'] as String? ?? '',
     );
@@ -78,10 +78,11 @@ class FixtureCatalogRepository implements CatalogRepository {
 
   /// Newest-first version comparison over dotted numeric cores
   /// (`3.13.1` > `3.12.7`, `1.99.0-insider` > `1.98.0`). Equal cores put
-  /// stable releases before prereleases.
-  static int _compareVersionsDesc(PackageVersionInfo a, PackageVersionInfo b) {
-    final ca = _versionCore(a.version);
-    final cb = _versionCore(b.version);
+  /// stable releases before prereleases. Public so the FFI catalog
+  /// repository (P3-05) normalizes manifest ordering the same way.
+  static int compareVersionsDesc(PackageVersionInfo a, PackageVersionInfo b) {
+    final ca = versionCore(a.version);
+    final cb = versionCore(b.version);
     for (var i = 0; i < ca.length && i < cb.length; i++) {
       final cmp = cb[i].compareTo(ca[i]); // descending
       if (cmp != 0) return cmp;
@@ -92,7 +93,7 @@ class FixtureCatalogRepository implements CatalogRepository {
     return 0;
   }
 
-  static List<int> _versionCore(String version) {
+  static List<int> versionCore(String version) {
     final core = version.split('-').first.split('+').first;
     return [for (final part in core.split('.')) int.tryParse(part) ?? 0];
   }

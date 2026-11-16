@@ -37,6 +37,17 @@ const SHIM_RELATIVE: &str = if cfg!(windows) {
     "shims/tool.cmd"
 };
 
+/// Platform-native separator form of a mixed-separator path string, used
+/// to compare against pipeline-produced paths (receipts store
+/// platform-native separators: `\` on Windows, `/` elsewhere).
+fn native(path: &str) -> String {
+    if cfg!(windows) {
+        path.replace('/', "\\")
+    } else {
+        path.replace('\\', "/")
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
@@ -198,7 +209,7 @@ fn seed_installed(env: &TestEnv, package_id: &str, version: &str, executable: Op
         });
     }
 
-    let install_path = relative_install_path.to_string_lossy().replace('/', "\\");
+    let install_path = relative_install_path.to_string_lossy().into_owned();
     let receipt = InstallReceipt {
         receipt_version: 1,
         package_id: package_id.to_owned(),
@@ -302,17 +313,19 @@ fn plan_shows_shims_path_change_and_previous_active() {
         .join("app/bin/tool.exe");
     assert_eq!(
         plan.shims[0].target_relative_path,
-        expected_target.to_string_lossy().replace('/', "\\")
+        native(&expected_target.to_string_lossy())
     );
     // Nothing on the fake PATH yet → the plan proposes one append.
     match &plan.path_change {
         PathChange::Append(entry) => {
             let expected = env.path().join(SHIMS_DIR);
+            // Compare in a common separator form: the real entry is
+            // absolute + platform-native.
             assert!(
                 Path::new(entry)
                     .to_string_lossy()
-                    .replace('/', "\\")
-                    .eq_ignore_ascii_case(&expected.to_string_lossy().replace('/', "\\")),
+                    .replace('\\', "/")
+                    .eq_ignore_ascii_case(&expected.to_string_lossy().replace('\\', "/")),
                 "planned PATH entry should be the shims dir, got {entry}"
             );
         }

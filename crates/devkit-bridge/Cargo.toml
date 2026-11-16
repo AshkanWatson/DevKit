@@ -13,6 +13,30 @@ crate-type = ["cdylib", "staticlib", "rlib"]
 
 [dependencies]
 devkit-core = { path = "../devkit-core" }
+devkit-catalog = { path = "../devkit-catalog" }
+devkit-download = { path = "../devkit-download" }
+devkit-install = { path = "../devkit-install" }
+devkit-jobs = { path = "../devkit-jobs" }
+devkit-registry = { path = "../devkit-registry" }
+# Default data-root resolution (HANDOFF.md §6: OS-standard user data
+# locations, never hard-coded paths).
+dirs = "6"
+serde = { workspace = true }
+serde_json = { workspace = true }
 # Pinned exactly per ADR 0002: the codegen binary and the runtime must match
 # (flutter_rust_bridge_codegen@2.13.0, pubspec flutter_rust_bridge 2.13.0).
 flutter_rust_bridge = "=2.13.0"
+tokio = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+# P3-05 integration test: loopback fixture HTTP server + fixture hashing
+# (testing-strategy.md rule 1: never real vendor hosts).
+tiny_http = { workspace = true }
+sha2 = { workspace = true }
+
+[lints.rust]
+# The flutter_rust_bridge attribute macros expand to `cfg(frb_expand)`
+# guards (FRB 2.13 internal); declare the name so rustc/clippy do not
+# flag it as unexpected in this crate.
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(frb_expand)'] }

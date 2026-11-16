@@ -255,3 +255,60 @@ class PublicationValidationTests(TestCase):
         self.assertTrue(package.is_published)
         payload = json.loads(self.client.get("/api/v1/catalog/packages").content)
         self.assertEqual(payload["count"], 1)
+
+
+class SeedRealCatalogTests(TestCase):
+    """The real-data seed command (offline: metadata only, no network).
+
+    The recorded URLs/hashes are re-verified against the actual vendor
+    servers by scripts/verify_catalog_artifacts.py (a maintainer tool, run
+    with network access — never in tests).
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        from django.core.management import call_command
+
+        call_command("seed_real_catalog", verbosity=0)
+
+    def test_seeds_three_real_published_packages(self):
+        packages = Package.objects.filter(is_published=True)
+        self.assertEqual(
+            {p.id for p in packages},
+            {"devkit.lang.python", "devkit.utility.ripgrep", "devkit.utility.fd"},
+        )
+        self.assertEqual(packages.count(), Package.objects.count())
+
+    def test_seeded_artifacts_are_publishable_shape(self):
+        artifacts = Artifact.objects.all()
+        self.assertEqual(artifacts.count(), 3)
+        for artifact in artifacts:
+            self.assertTrue(artifact.url.startswith("https://"))
+            self.assertEqual(len(artifact.sha256), 64)
+            self.assertGreater(artifact.size_bytes, 0)
+            self.assertTrue(artifact.executable_relative_path.endswith(".exe"))
+            # Versioned vendor releases only — never "latest" redirects.
+            self.assertNotIn("latest", artifact.url)
+
+    def test_seed_is_idempotent(self):
+        from django.core.management import call_command
+
+        call_command("seed_real_catalog", verbosity=0)
+        self.assertEqual(Package.objects.count(), 3)
+        self.assertEqual(Artifact.objects.count(), 3)
+        self.assertEqual(PackageVersion.objects.count(), 3)
+
+    def test_seeded_packages_are_visible_via_the_public_api(self):
+        payload = json.loads(self.client.get("/api/v1/catalog/packages").content)
+        self.assertEqual(payload["count"], 3)
+        ids = {item["id"] for item in payload["results"]}
+        self.assertIn("devkit.lang.python", ids)
+        manifest = json.loads(
+            self.client.get(
+                "/api/v1/catalog/packages/devkit.utility.ripgrep/manifest"
+            ).content
+        )
+        artifact = manifest["versions"][0]["artifacts"][0]
+        self.assertTrue(artifact["url"].startswith("https://github.com/"))
+        self.assertIn("executable_relative_path", artifact)

@@ -7,8 +7,9 @@ import 'frb_generated.dart';
 ///
 /// Kept out of `main()` so widget tests never touch real FFI: the dynamic
 /// library is only loaded when a provider that needs it is watched, and
-/// tests override those providers (test/widget_test.dart).
-Future<void> _ensureBridgeInitialized() {
+/// tests override those providers (test/widget_test.dart). Public so the
+/// FFI repository implementations (P3-05) reuse the same one-shot init.
+Future<void> ensureBridgeInitialized() {
   _initFuture ??= RustLib.init();
   return _initFuture!;
 }
@@ -19,12 +20,12 @@ Future<void>? _initFuture;
 ///
 /// Used for platform gating (DESIGN.md §7) and the diagnostics screen.
 final systemInfoProvider = FutureProvider<SystemInfo>((ref) async {
-  await _ensureBridgeInitialized();
+  await ensureBridgeInitialized();
   return getSystemInfo();
 });
 
 /// Engine identity (version/name) for the About screen and diagnostics.
 final appInfoProvider = FutureProvider<AppInfo>((ref) async {
-  await _ensureBridgeInitialized();
+  await ensureBridgeInitialized();
   return getAppInfo();
 });

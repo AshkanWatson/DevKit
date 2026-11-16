@@ -90,6 +90,16 @@ Never expose stack traces, secrets, internal storage paths, or unpublished packa
 - **Publication/admin endpoints are intentionally omitted from the public client contract.** They require authenticated maintainer roles, audit logs, schema validation, source validation, and explicit publish/unpublish actions (defined in Phase 2).
 - The API never proxies artifact downloads; clients download from the manifest-declared official source directly (docs/architecture/catalog-flow.md).
 
+## Real catalog data and URL verification
+
+The catalog serves **real vendor data**: version-pinned official release URLs with the exact SHA-256 and byte size measured from the actual published files. Placeholder/example hosts (`example.invalid`) exist only in the test suite.
+
+- **Seeding (maintainer, offline):** `python manage.py seed_real_catalog` upserts the real packages (`devkit.lang.python` 3.12.8 embeddable, `devkit.utility.ripgrep` 14.1.1, `devkit.utility.fd` 10.2.0) and publishes them through the normal validation gate. It writes metadata only — it never downloads. The recorded facts were measured from the vendor releases on 2026-11-15; if a vendor replaces a file, re-measure and update `catalog/management/commands/seed_real_catalog.py`.
+- **Verification (maintainer, online):** `python scripts/verify_catalog_artifacts.py <base-url>` walks the published catalog through the public API and re-downloads every artifact, asserting HTTPS-only, the recorded `size_bytes`, and the recorded SHA-256. Exit 0 = every artifact is real. Run it after any seed-data change or vendor release refresh.
+- **Pipeline proof (maintainer, online):** `DEVKIT_REAL_ARTIFACT=1 cargo run -p devkit-jobs --example real_install` downloads the real Python 3.12.8 embeddable release through the actual install pipeline (real byte-count progress, SHA-256 gate, extraction, receipt, validation, uninstall). Note: sources that redirect to a different host (GitHub release URLs → CDN) are declined by the same-host redirect policy (security-model.md §3.3) — direct-serving sources like python.org are used for the proof; see tasks/BACKLOG.md.
+- **Local dev server:** `DEVKIT_DEBUG=true DEVKIT_ALLOWED_HOSTS=127.0.0.1 python manage.py runserver 127.0.0.1:8000`. The base URL may be plain HTTP for the local loopback carve-out (security-model.md §3.1); artifact URLs themselves must always be HTTPS.
+- Tests never touch the network (testing-strategy.md): the seed command has offline tests (`catalog/tests.py::SeedRealCatalogTests`); real-URL verification is the script's job, run by a maintainer.
+
 ## API versioning
 
 - Versioned from day one under `/api/v1/`.

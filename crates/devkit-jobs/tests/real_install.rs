@@ -702,10 +702,47 @@ fn reinstalling_an_installed_version_is_idempotent() {
 // Registry source (the real catalog-data path)
 // ---------------------------------------------------------------------------
 
+/// (Platform, os, architecture) of the machine running this test binary —
+/// mirrors `current_platform()` (pipeline.rs) so the catalog-resolution
+/// test passes on every CI runner (ubuntu-latest, macos-latest, windows).
+fn this_runner_platform() -> (Platform, ArtifactOs, Architecture) {
+    #[cfg(target_os = "windows")]
+    {
+        if cfg!(target_arch = "x86_64") {
+            (Platform::WindowsX64, ArtifactOs::Windows, Architecture::X64)
+        } else {
+            (
+                Platform::WindowsArm64,
+                ArtifactOs::Windows,
+                Architecture::Arm64,
+            )
+        }
+    }
+    #[cfg(target_os = "macos")]
+    {
+        if cfg!(target_arch = "x86_64") {
+            (Platform::MacosX64, ArtifactOs::Macos, Architecture::X64)
+        } else {
+            (Platform::MacosArm64, ArtifactOs::Macos, Architecture::Arm64)
+        }
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        if cfg!(target_arch = "aarch64") {
+            (Platform::LinuxArm64, ArtifactOs::Linux, Architecture::Arm64)
+        } else {
+            (Platform::LinuxX64, ArtifactOs::Linux, Architecture::X64)
+        }
+    }
+}
+
 fn catalog_manifest(url: String) -> PackageManifest {
-    let windows_artifact = Artifact {
-        os: ArtifactOs::Windows,
-        architecture: Architecture::X64,
+    // The artifact for THIS runner plus a wrong-platform artifact that the
+    // resolver must filter out (never resolve macos on windows, etc.).
+    let (this_platform, this_os, this_arch) = this_runner_platform();
+    let this_artifact = Artifact {
+        os: this_os,
+        architecture: this_arch,
         installer: InstallerKind::Archive,
         url: url.clone(),
         sha256: sha256_hex(&happy_zip()),
@@ -713,13 +750,23 @@ fn catalog_manifest(url: String) -> PackageManifest {
         signature_url: None,
         publisher_identity: String::new(),
         archive_root: String::new(),
-        executable_relative_path: "app/bin/tool.exe".to_owned(),
+        executable_relative_path: "app/bin/tool".to_owned(),
     };
-    let macos_artifact = Artifact {
-        os: ArtifactOs::Macos,
-        architecture: Architecture::Arm64,
+    let (other_os, other_arch) = if matches!(this_os, ArtifactOs::Windows) {
+        (ArtifactOs::Macos, Architecture::Arm64)
+    } else {
+        (ArtifactOs::Windows, Architecture::X64)
+    };
+    let other_platform = if matches!(this_platform, Platform::WindowsX64) {
+        Platform::MacosArm64
+    } else {
+        Platform::WindowsX64
+    };
+    let other_artifact = Artifact {
+        os: other_os,
+        architecture: other_arch,
         installer: InstallerKind::Archive,
-        url: url.replace("tool.zip", "tool.tar.gz"),
+        url: url.replace("tool.zip", "tool.other.zip"),
         sha256: sha256_hex(&happy_zip()),
         size_bytes: happy_zip().len() as u64,
         signature_url: None,
@@ -735,7 +782,7 @@ fn catalog_manifest(url: String) -> PackageManifest {
         publisher: "Test Publisher".to_owned(),
         homepage: "https://example.invalid/tool".to_owned(),
         category: Category::Utility,
-        supported_platforms: vec![Platform::WindowsX64, Platform::MacosArm64],
+        supported_platforms: vec![this_platform, other_platform],
         default_version_policy: VersionPolicyName::Stable,
         versions: vec![PackageVersion {
             version: "1.0.0".to_owned(),
@@ -743,7 +790,7 @@ fn catalog_manifest(url: String) -> PackageManifest {
             release_date: Some("2026-01-01".to_owned()),
             release_notes_url: None,
             dependencies: Vec::new(),
-            artifacts: vec![windows_artifact, macos_artifact],
+            artifacts: vec![this_artifact, other_artifact],
         }],
         license_expression: "MIT".to_owned(),
         maintainer: "maintainers@example.invalid".to_owned(),
@@ -764,8 +811,11 @@ fn registry_source_resolves_the_current_platform_artifact_from_the_catalog_cache
     let resolved = RegistrySource::new(Database::open(&env.db_path).unwrap())
         .resolve(PACKAGE_ID, "1.0.0")
         .unwrap();
-    assert_eq!(resolved.os, ArtifactOs::Windows);
-    assert_eq!(resolved.architecture, Architecture::X64);
+    // The resolver must pick the artifact for THIS runner's platform, not
+    // the wrong-platform decoy also present in the manifest.
+    let (_, expected_os, expected_arch) = this_runner_platform();
+    assert_eq!(resolved.os, expected_os);
+    assert_eq!(resolved.architecture, expected_arch);
     assert!(resolved
         .url
         .starts_with("https://releases.example.invalid/"));

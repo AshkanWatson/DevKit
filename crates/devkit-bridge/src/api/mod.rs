@@ -1,10 +1,23 @@
-//! First bridge operations (P1-02): `get_app_info` and `get_system_info`.
+//! Bridge surface: P1-02 diagnostics + the P3-05 real engine operations.
 //!
-//! These validate the toolchain end to end (Rust → codegen → Dart) and serve
-//! the About/diagnostics surfaces (DESIGN.md §10). Catalog and installation
-//! operations land in P1-04/P1-05 and follow docs/ffi/bridge-contract.md.
+//! Every `pub` function in this module tree becomes a typed Dart call
+//! (flutter_rust_bridge v2, docs/ffi/bridge-contract.md for the operation
+//! and error models). Never expose raw command execution here.
+//!
+//! - `simple` — FRB scaffold (`init_app`) + the demo `greet`.
+//! - `engine` — `init_engine` + storage-path facts (P3-05).
+//! - `catalog` — cached catalog reads + HTTPS sync (P3-05).
+//! - `jobs` — real install jobs, event streams, cancellation (P3-05).
+//! - `installed` — registry, activation consent pair, uninstall (P3-05).
 
 use std::env::consts::{ARCH, OS};
+
+pub mod catalog;
+pub mod engine;
+pub mod error;
+pub mod installed;
+pub mod jobs;
+pub mod simple;
 
 /// Identity of the running engine, for About / diagnostics.
 #[derive(Debug, Clone)]
@@ -41,7 +54,11 @@ pub fn get_system_info() -> SystemInfo {
     SystemInfo {
         os: OS.to_string(),
         arch: ARCH.to_string(),
-        capabilities: vec!["sqlite_registry".to_string(), "catalog_client".to_string()],
+        capabilities: vec![
+            "sqlite_registry".to_string(),
+            "catalog_client".to_string(),
+            "install_pipeline".to_string(),
+        ],
     }
 }
 

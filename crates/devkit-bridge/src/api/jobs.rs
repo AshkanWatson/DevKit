@@ -12,7 +12,7 @@
 use std::time::Duration;
 
 use devkit_download::ReqwestDownloadHttp;
-use devkit_install::ArchiveLimits;
+use devkit_install::{ArchiveLimits, ProcessExeRunner};
 use devkit_jobs::pipeline::{RealInstallConfig, RegistrySource};
 use devkit_jobs::{CancelOutcome, Stage};
 use devkit_registry::package_cache::PackageCache;
@@ -135,6 +135,7 @@ pub fn start_install(package_id: String, version: String) -> Result<String, Brid
             .map_err(|error| bridge_error(BridgeErrorCode::NetworkError, error.to_string()))?,
         source,
         limits: ArchiveLimits::default(),
+        vendor_runner: Box::new(ProcessExeRunner),
         validation_hook: None,
     };
     state

@@ -123,6 +123,7 @@ fn main() {
                     artifact: real_artifact(),
                 },
                 limits: ArchiveLimits::default(),
+                vendor_runner: Box::new(devkit_install::ProcessExeRunner),
                 validation_hook: None,
             },
             PACKAGE_ID,
@@ -152,10 +153,17 @@ fn main() {
     let receipt: InstallReceipt = serde_json::from_str(&record.receipt_json).expect("receipt JSON");
     println!(
         "receipt: installer={} archive={}",
-        receipt.installer, receipt.archive.format
+        receipt.installer,
+        receipt
+            .archive
+            .as_ref()
+            .map(|part| part.format.clone())
+            .unwrap_or_default()
     );
-    println!("  sha256 = {}", receipt.archive.sha256_hex);
-    println!("  size   = {} bytes", receipt.archive.size_bytes);
+    if let Some(archive) = &receipt.archive {
+        println!("  sha256 = {}", archive.sha256_hex);
+        println!("  size   = {} bytes", archive.size_bytes);
+    }
     println!("  files  = {}", receipt.files.len());
     let entry = receipt
         .executable_relative_path

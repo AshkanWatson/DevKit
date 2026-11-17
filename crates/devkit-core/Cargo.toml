@@ -9,7 +9,6 @@ license-file.workspace = true
 [dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }
-thiserror = { workspace = true }
 
 [dev-dependencies]
 # Keep test-only dependencies minimal; no network access in unit tests.

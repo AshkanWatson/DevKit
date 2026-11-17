@@ -15,6 +15,14 @@ flate2 = { workspace = true }
 sha2 = { workspace = true }
 thiserror = { workspace = true }
 
+[target.'cfg(windows)'.dependencies]
+# P3-07: read the MSI ProductCode from the verified package's Property
+# table (read-only database open via msi.dll) for the receipt + the
+# msiexec /x uninstall/rollback undo. Never executes the artifact.
+windows-sys = { workspace = true, features = [
+    "Win32_System_ApplicationInstallationAndServicing",
+] }
+
 [dev-dependencies]
 tempfile = { workspace = true }
 proptest = { workspace = true }

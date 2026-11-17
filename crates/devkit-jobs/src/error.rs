@@ -15,6 +15,10 @@ pub enum JobsError {
     /// A bug in this crate rather than bad input (e.g. an invalid state
     /// transition the state machine should have prevented).
     Internal(String),
+    /// A receipt-driven vendor adapter step failed (P3-07: the
+    /// `msiexec /x` uninstall of an msi receipt) — neither a bug nor a
+    /// filesystem error; the message carries the vendor's exit code.
+    Vendor(String),
 }
 
 impl fmt::Display for JobsError {
@@ -24,6 +28,7 @@ impl fmt::Display for JobsError {
             JobsError::Registry(e) => write!(f, "registry error: {e}"),
             JobsError::Io(e) => write!(f, "filesystem error: {e}"),
             JobsError::Internal(message) => write!(f, "jobs bug: {message}"),
+            JobsError::Vendor(message) => write!(f, "vendor adapter error: {message}"),
         }
     }
 }
@@ -34,7 +39,7 @@ impl std::error::Error for JobsError {
             JobsError::Sql(e) => Some(e),
             JobsError::Registry(e) => Some(e),
             JobsError::Io(e) => Some(e),
-            JobsError::Internal(_) => None,
+            JobsError::Internal(_) | JobsError::Vendor(_) => None,
         }
     }
 }

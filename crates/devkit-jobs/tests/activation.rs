@@ -211,15 +211,16 @@ fn seed_installed(env: &TestEnv, package_id: &str, version: &str, executable: Op
 
     let install_path = relative_install_path.to_string_lossy().into_owned();
     let receipt = InstallReceipt {
-        receipt_version: 1,
+        receipt_version: 2,
         package_id: package_id.to_owned(),
         version: version.to_owned(),
         installer: "archive".to_owned(),
-        archive: devkit_jobs::pipeline::ArchiveReceipt {
+        archive: Some(devkit_jobs::pipeline::ArchiveReceipt {
             format: "zip".to_owned(),
             sha256_hex: sha256_hex(b"unused"),
             size_bytes: 0,
-        },
+        }),
+        exe: None,
         install_path: install_path.clone(),
         files,
         executable_relative_path: executable.map(str::to_owned),

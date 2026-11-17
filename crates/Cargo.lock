@@ -376,7 +376,6 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
- "thiserror",
 ]
 
 [[package]]
@@ -404,6 +403,7 @@ dependencies = [
  "tar",
  "tempfile",
  "thiserror",
+ "windows-sys 0.61.2",
  "zip",
 ]
 

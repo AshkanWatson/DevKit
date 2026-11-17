@@ -24,7 +24,7 @@ use devkit_core::manifest::{
     PackageVersion, Platform, VersionPolicyName, SUPPORTED_SCHEMA_VERSION,
 };
 use devkit_download::ReqwestDownloadHttp;
-use devkit_install::ArchiveLimits;
+use devkit_install::{ArchiveLimits, ProcessExeRunner};
 use devkit_jobs::pipeline::{
     uninstall_version, validate_installation, InstallReceipt, InstallSource, RealInstallConfig,
     ReceiptFile, RegistrySource, StageFailure, UninstallOutcome, ValidationHook,
@@ -179,6 +179,7 @@ fn config(
         transport: ReqwestDownloadHttp::new().unwrap(),
         source,
         limits: ArchiveLimits::default(),
+        vendor_runner: Box::new(ProcessExeRunner),
         validation_hook: hook,
     }
 }
@@ -315,9 +316,15 @@ fn end_to_end_install_downloads_extracts_registers_and_validates() {
     // Receipt content matches the fixture archive exactly.
     let receipt: InstallReceipt = serde_json::from_str(&record.receipt_json).unwrap();
     assert_eq!(receipt.installer, "archive");
-    assert_eq!(receipt.archive.format, "zip");
-    assert_eq!(receipt.archive.sha256_hex, sha256_hex(&bytes));
-    assert_eq!(receipt.archive.size_bytes, bytes.len() as u64);
+    assert_eq!(receipt.archive.as_ref().unwrap().format, "zip");
+    assert_eq!(
+        receipt.archive.as_ref().unwrap().sha256_hex,
+        sha256_hex(&bytes)
+    );
+    assert_eq!(
+        receipt.archive.as_ref().unwrap().size_bytes,
+        bytes.len() as u64
+    );
     assert_eq!(
         receipt.executable_relative_path.as_deref(),
         Some("app/bin/tool.exe")
@@ -497,16 +504,16 @@ fn version_not_found_fails_with_the_stable_code_and_rolls_back() {
 }
 
 #[test]
-fn non_archive_installer_kind_is_rejected_before_any_network_work() {
+fn non_supported_installer_kinds_are_rejected_before_any_network_work() {
     let bytes = happy_zip();
     let env = TestEnv::new();
     seed_catalog(&env);
     let port = spawn_serving(bytes.clone());
     let manager = env.manager();
-    // The exe adapter is P3-06 scope: resolution must refuse before any
-    // download happens.
+    // The `msi` adapter is P3-07 scope: resolution must refuse before any
+    // download happens, on every platform.
     let source = FixtureSource {
-        artifact: artifact_for(port, &bytes, InstallerKind::Exe),
+        artifact: artifact_for(port, &bytes, InstallerKind::Msi),
         failure: None,
     };
     let job_id = manager

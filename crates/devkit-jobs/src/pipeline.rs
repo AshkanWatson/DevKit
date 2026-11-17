@@ -9,7 +9,14 @@
 //! DOWNLOADING devkit-download engine: stream -> size cap -> SHA-256
 //! VERIFYING   verification report (real hash + size from the engine)
 //! EXTRACTING  devkit-install archive adapter (zip/tar/tar.gz, bomb/traversal/link defense)
-//! CONFIGURING atomic rename into the version directory + receipt row (status `installing`)
+//!             -- or, for `exe`/`msi` artifacts (Windows only) --
+//! INSTALLING  devkit-install vendor adapters: technology/container
+//!             detection from the verified bytes + fixed silent flags
+//!             (never catalog data); the vendor installer process is
+//!             owned by the job. `msi` receipts record the ProductCode
+//!             (read-only Property-table read) so rollback and uninstall
+//!             run `msiexec /x {ProductCode}` — no ghost registration.
+//! CONFIGURING artifact cleanup + receipt row (status `installing`)
 //! VALIDATING  validate_installation (existence, sizes, containment, entry point)
 //! COMPLETED   receipt status becomes `installed`
 //! ```
@@ -44,7 +51,12 @@ use devkit_core::manifest::{
 use devkit_download::{
     download_and_verify_with_progress, CancelToken, DownloadError, DownloadHttp, DownloadRequest,
 };
-use devkit_install::{detect_format, ensure_within, extract_file, ArchiveFormat, ArchiveLimits};
+use devkit_install::{
+    build_command, build_uninstall_command, detect_format, detect_technology_from_file,
+    ensure_within, extract_file, is_msi_package_file, msi_build_command,
+    msi_is_success_exit_code, msiexec_program, read_product_code, walk_installed_files, ArchiveFormat, ArchiveLimits, ExeRunner,
+    ExeTechnology, MSI_EXIT_UNKNOWN_PRODUCT,
+};
 use devkit_registry::{
     package_cache::PackageCache, Database, InstalledRecord, InstalledRepo, InstalledStatus,
 };
@@ -93,7 +105,8 @@ pub struct ReceiptFile {
     pub sha256_hex: String,
 }
 
-/// The downloaded artifact part of the receipt.
+/// The downloaded artifact part of the receipt (archive adapter only;
+/// `Option` since P3-06, when the exe adapter arrived).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ArchiveReceipt {
     /// `zip`, `tar`, or `tar.gz` (magic-byte detection).
@@ -102,19 +115,44 @@ pub struct ArchiveReceipt {
     pub size_bytes: u64,
 }
 
+/// The vendor-installer part of the receipt (`installer: exe`/`msi`,
+/// P3-06/P3-07).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VendorReceiptPart {
+    /// `inno-setup`, `nsis`, or `msi` — detected from the verified bytes,
+    /// never from catalog data.
+    pub technology: String,
+    /// The installer's exit code (`Some(0)` = success; `None` when the
+    /// process died without a code).
+    pub exit_code: Option<i32>,
+    /// `msi` installs only: the package's ProductCode, read from the
+    /// verified MSI's Property table. It drives the `msiexec /x` uninstall
+    /// and the rollback undo so no ghost registration is left behind.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub product_code: Option<String>,
+}
+
 /// `InstallReceipt` (local-database.md §2: `installed_versions.receipt`).
 /// Records everything `validate_installation` and `uninstall` need: paths,
 /// per-file checksums, and the artifact identity. Serialized as JSON into
 /// the receipt column. `receipt_version` lets the format evolve without
-/// breaking old rows.
+/// breaking old rows (v2, P3-06/07: `archive` became optional and the
+/// `vendor` part was added for exe/msi installs; v1 rows still parse via
+/// `#[serde(default)]`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InstallReceipt {
     pub receipt_version: u32,
     pub package_id: String,
     pub version: String,
-    /// `archive` (the only adapter in P3-03 scope; exe/msi are P3-06/07).
+    /// `archive` (P3-02), `exe` (P3-06) or `msi` (P3-07); the remaining
+    /// installer kinds are later phases.
     pub installer: String,
-    pub archive: ArchiveReceipt,
+    /// The downloaded-artifact part (archive adapter only).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub archive: Option<ArchiveReceipt>,
+    /// The vendor-installer part (exe/msi adapters only).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub vendor: Option<VendorReceiptPart>,
     /// Managed-root-relative installation directory.
     pub install_path: String,
     pub files: Vec<ReceiptFile>,
@@ -145,6 +183,11 @@ pub struct RealInstallConfig<T: DownloadHttp, S: InstallSource> {
     pub transport: T,
     pub source: S,
     pub limits: ArchiveLimits,
+    /// The vendor-installers' runner (exe/msi adapters). Production
+    /// callers inject `devkit_install::ProcessExeRunner`; tests record the
+    /// constructed command line and simulate installer behavior instead of
+    /// running foreign vendor artifacts (testing-strategy.md rule 1).
+    pub vendor_runner: Box<dyn ExeRunner>,
     /// Test-only hook (see [`ValidationHook`]).
     pub validation_hook: Option<ValidationHook>,
 }
@@ -371,12 +414,21 @@ impl RollbackPaths {
 /// Context for the terminal chain (`FAILED`/`CANCELLED` →
 /// `ROLLING_BACK` → `ROLLED_BACK`): the filesystem/registry cleanup runs
 /// **before** the events are recorded, so the recorded state is true.
+/// For `msi` installs the vendor undo (`msiexec /x {ProductCode}`) also
+/// runs here — a failed install that left a Windows Installer registration
+/// behind must not ghost the system.
 struct Finish<'a, 'conn> {
     store: &'a JobStore<'conn>,
     repo: InstalledRepo<'conn>,
     job_id: &'a str,
     package_id: &'a str,
     version: &'a str,
+    /// The vendor runner (exe/msi adapters); `None` never happens in
+    /// practice, `Option` keeps construction simple.
+    vendor_runner: Option<&'a dyn ExeRunner>,
+    /// Set when a vendor install that registers itself (msi) is about to
+    /// run: the ProductCode for the best-effort `msiexec /x` undo.
+    vendor_undo: Cell<Option<String>>,
 }
 
 impl Finish<'_, '_> {
@@ -389,6 +441,7 @@ impl Finish<'_, '_> {
         receipt_written: bool,
     ) -> Result<RunOutcome, JobsError> {
         paths.remove_all();
+        self.run_vendor_undo();
         if receipt_written {
             self.repo.delete(self.package_id, self.version)?;
         }
@@ -412,6 +465,7 @@ impl Finish<'_, '_> {
         receipt_written: bool,
     ) -> Result<RunOutcome, JobsError> {
         paths.remove_all();
+        self.run_vendor_undo();
         if receipt_written {
             self.repo.delete(self.package_id, self.version)?;
         }
@@ -426,6 +480,27 @@ impl Finish<'_, '_> {
             "Managed root and registry restored to pre-install state",
         )?;
         Ok(RunOutcome::RolledBack)
+    }
+
+    /// Best-effort `msiexec /x {ProductCode}`: a failed/cancelled msi
+    /// install may have registered the product with Windows Installer
+    /// before failing; leaving that registration behind would ghost the
+    /// system and break the next install. Failures of the undo itself are
+    /// ignored — the rollback must never mask the original error, and a
+    /// stubborn registration surfaces at the next install as an honest
+    /// msiexec failure.
+    fn run_vendor_undo(&self) {
+        let Some(product_code) = self.vendor_undo.take() else {
+            return;
+        };
+        let Some(runner) = self.vendor_runner else {
+            return;
+        };
+        // The undo must not be cancellable by the very cancellation that
+        // triggered it: it runs with a fresh, unset token.
+        let undo_cancel = CancelToken::from_shared(Arc::new(AtomicBool::new(false)));
+        let (program, flags) = build_uninstall_command(&msiexec_program(), &product_code);
+        let _ = runner.run(&program, &flags, &undo_cancel);
     }
 }
 
@@ -452,6 +527,8 @@ where
         job_id,
         package_id,
         version,
+        vendor_runner: Some(config.vendor_runner.as_ref()),
+        vendor_undo: Cell::new(None),
     };
     let repo = &finish.repo;
 
@@ -509,15 +586,39 @@ where
             return finish.failed(current, failure.code, &failure.message, &none_paths, false)
         }
     };
-    if artifact.installer != InstallerKind::Archive {
-        return finish.failed(
-            current,
-            ErrorCode::InvalidArgument,
-            "Only archive artifacts install in this phase; vendor installer \
-             adapters (exe/msi) follow in P3-06/P3-07",
-            &none_paths,
-            false,
-        );
+    // Installer-kind gate (installation-lifecycle.md §2): `archive` is the
+    // P3-02 adapter; `exe` (P3-06) and `msi` (P3-07) run Windows vendor
+    // installers only — a non-Windows build has neither adapter, so the
+    // job fails with `UNSUPPORTED_PLATFORM` before anything is downloaded.
+    // The remaining kinds are later phases.
+    match artifact.installer {
+        InstallerKind::Archive => {}
+        InstallerKind::Exe | InstallerKind::Msi => {
+            if !cfg!(windows) {
+                return finish.failed(
+                    current,
+                    ErrorCode::UnsupportedPlatform,
+                    "the exe/msi adapters install Windows vendor installers \
+                     only; this build has no such adapter",
+                    &none_paths,
+                    false,
+                );
+            }
+        }
+        InstallerKind::Dmg
+        | InstallerKind::Pkg
+        | InstallerKind::Appimage
+        | InstallerKind::ExternalPackageManager => {
+            return finish.failed(
+                current,
+                ErrorCode::InvalidArgument,
+                "Only archive, exe, and msi artifacts install in this \
+                 phase; the remaining installer kinds (dmg, pkg, appimage, \
+                 external_package_manager) are later phases",
+                &none_paths,
+                false,
+            );
+        }
     }
     if let Err(failure) = validate_install_identities(package_id, version) {
         return finish.failed(current, failure.code, &failure.message, &none_paths, false);
@@ -671,51 +772,327 @@ where
     }
 
     // ------------------------------------------------------------------
-    // EXTRACTING
+    // EXTRACTING (archive adapter) / INSTALLING (vendor adapters)
     // ------------------------------------------------------------------
-    store.record_event(
-        job_id,
-        Stage::Extracting,
-        None,
-        "Extracting archive (managed archive adapter)",
-        None,
-    )?;
-    current = Stage::Extracting;
+    let is_vendor = matches!(
+        artifact.installer,
+        InstallerKind::Exe | InstallerKind::Msi
+    );
+    let executable = non_empty(&artifact.executable_relative_path).map(str::to_owned);
+    let mut archive_root = non_empty(&artifact.archive_root).map(str::to_owned);
 
-    let format = read_archive_format(&artifact_path);
-    let Some(format) = format else {
-        return finish.failed(
-            current,
-            ErrorCode::IntegrityCheckFailed,
-            "verified artifact is not a supported archive (zip, tar, tar.gz)",
-            &paths,
-            false,
-        );
-    };
-    let extract = match extract_file(&artifact_path, &staging_dir, &config.limits, &token) {
-        Ok(extract) => extract,
-        Err(error) => {
-            let code = error.code();
-            if code == ErrorCode::Cancelled {
-                return finish.cancelled(current, &paths, false);
-            }
-            return finish.failed(current, code, &error.to_string(), &paths, false);
+    let files: Vec<ReceiptFile>;
+    let mut archive_receipt: Option<ArchiveReceipt> = None;
+    let mut vendor_receipt: Option<VendorReceiptPart> = None;
+
+    if is_vendor {
+        // The vendor adapters (P3-06 exe, P3-07 msi) run the verified
+        // vendor installer with flags from the fixed contract tables
+        // (devkit-install::exe / devkit-install::msi,
+        // installation-lifecycle.md §2.1/§2.2). The installer writes
+        // directly into the final directory — no staging extraction, no
+        // rename — and INSTALLING covers the installer adapters (state
+        // machine: Verifying -> Installing).
+        store.record_event(
+            job_id,
+            Stage::Installing,
+            None,
+            "Running the vendor installer (managed vendor adapter)",
+            None,
+        )?;
+        current = Stage::Installing;
+
+        // The vendor installer owns its layout: the final directory is
+        // registered for rollback **before** the process starts, so a
+        // failure/cancel removes whatever the installer already wrote.
+        let final_rel = final_relative(package_id, version);
+        let final_dir = managed_root.join(&final_rel);
+        if final_dir.exists() {
+            return finish.failed(
+                current,
+                ErrorCode::InstallFailed,
+                "target version directory already exists; repair = uninstall + reinstall",
+                &paths,
+                false,
+            );
         }
-    };
-    store.record_event(
-        job_id,
-        Stage::Extracting,
-        None,
-        &format!(
-            "Extracted {} files ({} bytes)",
-            extract.files.len(),
-            extract.total_bytes
-        ),
-        None,
-    )?;
+        paths.final_dir = Some(final_dir.clone());
+
+        // Per-kind command construction (devkit-install contract tables;
+        // catalog text has no path into either command line) and the run.
+        let (technology_label, exit_code, product_code) = match artifact.installer {
+            InstallerKind::Exe => {
+                // Technology detection reads the **verified** bytes: a
+                // file that is not a PE image or carries no contract-table
+                // marker is never executed.
+                let technology = match detect_technology_from_file(&artifact_path) {
+                    Ok(Some(technology)) => technology,
+                    Ok(None) => {
+                        return finish.failed(
+                            current,
+                            ErrorCode::InvalidArgument,
+                            "verified installer is not in the supported contract \
+                             table (the exe adapter covers Inno Setup and NSIS)",
+                            &paths,
+                            false,
+                        );
+                    }
+                    Err(source) => {
+                        return finish.failed(
+                            current,
+                            ErrorCode::InstallFailed,
+                            &format!("cannot read the verified installer: {source}"),
+                            &paths,
+                            false,
+                        );
+                    }
+                };
+                store.record_event(
+                    job_id,
+                    Stage::Installing,
+                    None,
+                    &format!(
+                        "Vendor installer technology: {} (fixed silent flags)",
+                        technology.label()
+                    ),
+                    None,
+                )?;
+
+                // /LOG lands in the staging directory (deleted on
+                // rollback); NSIS has no log flag.
+                let log_path = match technology {
+                    ExeTechnology::InnoSetup => Some(staging_dir.join("install.log")),
+                    ExeTechnology::Nsis => None,
+                };
+                let (program, flags) =
+                    build_command(&artifact_path, technology, &final_dir, log_path.as_deref());
+                if cancel.load(Ordering::Relaxed) {
+                    return finish.cancelled(current, &paths, false);
+                }
+                // The runner owns the process on the job's behalf: it
+                // polls the job's cancellation token (~100 ms) and kills
+                // the child on cancel (installation-lifecycle.md §3 rule 3:
+                // the job owns a process it started).
+                let outcome = match config.vendor_runner.run(&program, &flags, &token) {
+                    Ok(outcome) => outcome,
+                    Err(error) => {
+                        let code = error.code();
+                        return finish.failed(current, code, &error.to_string(), &paths, false);
+                    }
+                };
+                if outcome.cancelled {
+                    return finish.cancelled(current, &paths, false);
+                }
+                if outcome.exit_code != Some(0) {
+                    return finish.failed(
+                        current,
+                        ErrorCode::InstallFailed,
+                        &format!(
+                            "vendor installer did not succeed (exit code {:?}); the \
+                             installation directory was removed",
+                            outcome.exit_code
+                        ),
+                        &paths,
+                        false,
+                    );
+                }
+                store.record_event(
+                    job_id,
+                    Stage::Installing,
+                    None,
+                    "Vendor installer finished successfully",
+                    None,
+                )?;
+                (technology.label().to_owned(), outcome.exit_code, None)
+            }
+            InstallerKind::Msi => {
+                // Container check first: a file without the OLE compound
+                // magic is not an MSI package and is never executed nor
+                // opened (INVALID_ARGUMENT, like a wrong exe technology).
+                match is_msi_package_file(&artifact_path) {
+                    Ok(true) => {}
+                    Ok(false) => {
+                        return finish.failed(
+                            current,
+                            ErrorCode::InvalidArgument,
+                            "verified artifact is not a Windows Installer \
+                             package (msi)",
+                            &paths,
+                            false,
+                        );
+                    }
+                    Err(source) => {
+                        return finish.failed(
+                            current,
+                            ErrorCode::InstallFailed,
+                            &format!("cannot read the verified package: {source}"),
+                            &paths,
+                            false,
+                        );
+                    }
+                }
+                store.record_event(
+                    job_id,
+                    Stage::Installing,
+                    None,
+                    "Windows Installer package (fixed silent flags)",
+                    None,
+                )?;
+
+                // The ProductCode is read from the verified package's
+                // Property table (read-only database open; the file is
+                // never executed for this). It drives the rollback undo
+                // and the receipt-driven uninstall, so a package without
+                // it is refused, never run.
+                let product_code = match read_product_code(&artifact_path) {
+                    Ok(code) => code,
+                    Err(error) => {
+                        let code = error.code();
+                        return finish.failed(
+                            current,
+                            code,
+                            &format!("cannot read the MSI ProductCode: {error}"),
+                            &paths,
+                            false,
+                        );
+                    }
+                };
+                // From here on, a failed/cancelled install runs the
+                // msiexec /x undo: the package may have registered itself
+                // with Windows Installer before failing.
+                finish.vendor_undo.set(Some(product_code.clone()));
+
+                let (program, flags) =
+                    msi_build_command(&msiexec_program(), &artifact_path, &final_dir);
+                if cancel.load(Ordering::Relaxed) {
+                    return finish.cancelled(current, &paths, false);
+                }
+                let outcome = match config.vendor_runner.run(&program, &flags, &token) {
+                    Ok(outcome) => outcome,
+                    Err(error) => {
+                        let code = error.code();
+                        return finish.failed(current, code, &error.to_string(), &paths, false);
+                    }
+                };
+                if outcome.cancelled {
+                    return finish.cancelled(current, &paths, false);
+                }
+                // 0 = success; 3010 = success with a recommended reboot
+                // (suppressed by /norestart; the files are installed).
+                if !msi_is_success_exit_code(outcome.exit_code) {
+                    return finish.failed(
+                        current,
+                        ErrorCode::InstallFailed,
+                        &format!(
+                            "msiexec did not succeed (exit code {:?}); the \
+                             installation directory was removed and the \
+                             package registration undone (msiexec /x)",
+                            outcome.exit_code
+                        ),
+                        &paths,
+                        false,
+                    );
+                }
+                store.record_event(
+                    job_id,
+                    Stage::Installing,
+                    None,
+                    "Vendor installer finished successfully",
+                    None,
+                )?;
+                ("msi".to_owned(), outcome.exit_code, Some(product_code))
+            }
+            _ => unreachable!("is_vendor matched Exe/Msi only"),
+        };
+
+        // The receipt is built by observing what the installer produced. A
+        // vendor that ignored the install-directory flag leaves the
+        // receipt empty, which fails validation below.
+        let walked = match walk_installed_files(&final_dir) {
+            Ok(walked) => walked,
+            Err(source) => {
+                return finish.failed(
+                    current,
+                    ErrorCode::InstallFailed,
+                    &format!("cannot inventory the installation directory: {source}"),
+                    &paths,
+                    false,
+                );
+            }
+        };
+        files = walked
+            .iter()
+            .map(|file| ReceiptFile {
+                relative_path: file.relative_path.to_string_lossy().into_owned(),
+                size_bytes: file.size_bytes,
+                sha256_hex: file.sha256_hex.clone(),
+            })
+            .collect();
+        vendor_receipt = Some(VendorReceiptPart {
+            technology: technology_label,
+            exit_code,
+            product_code,
+        });
+        archive_root = None;
+    } else {
+        store.record_event(
+            job_id,
+            Stage::Extracting,
+            None,
+            "Extracting archive (managed archive adapter)",
+            None,
+        )?;
+        current = Stage::Extracting;
+
+        let format = read_archive_format(&artifact_path);
+        let Some(format) = format else {
+            return finish.failed(
+                current,
+                ErrorCode::IntegrityCheckFailed,
+                "verified artifact is not a supported archive (zip, tar, tar.gz)",
+                &paths,
+                false,
+            );
+        };
+        let extract = match extract_file(&artifact_path, &staging_dir, &config.limits, &token) {
+            Ok(extract) => extract,
+            Err(error) => {
+                let code = error.code();
+                if code == ErrorCode::Cancelled {
+                    return finish.cancelled(current, &paths, false);
+                }
+                return finish.failed(current, code, &error.to_string(), &paths, false);
+            }
+        };
+        store.record_event(
+            job_id,
+            Stage::Extracting,
+            None,
+            &format!(
+                "Extracted {} files ({} bytes)",
+                extract.files.len(),
+                extract.total_bytes
+            ),
+            None,
+        )?;
+        files = extract
+            .files
+            .iter()
+            .map(|file| ReceiptFile {
+                relative_path: file.relative_path.to_string_lossy().into_owned(),
+                size_bytes: file.size_bytes,
+                sha256_hex: file.sha256_hex.clone(),
+            })
+            .collect();
+        archive_receipt = Some(ArchiveReceipt {
+            format: format_label(format),
+            sha256_hex: downloaded.sha256_hex,
+            size_bytes: downloaded.size_bytes,
+        });
+    }
 
     // ------------------------------------------------------------------
-    // CONFIGURING (atomic rename + receipt row)
+    // CONFIGURING (receipt row; archive: atomic rename first)
     // ------------------------------------------------------------------
     store.record_event(
         job_id,
@@ -736,30 +1113,38 @@ where
     }
     let final_rel = final_relative(package_id, version);
     let final_dir = managed_root.join(&final_rel);
-    // Never overwrite an existing version directory
-    // (version-management.md §2 rule 1).
-    if final_dir.exists() {
-        return finish.failed(
-            current,
-            ErrorCode::InstallFailed,
-            "target version directory already exists; repair = uninstall + reinstall",
-            &paths,
-            false,
-        );
-    }
-    if let Err(source) = fs::rename(&staging_dir, &final_dir) {
-        return finish.failed(
-            current,
-            ErrorCode::InstallFailed,
-            &format!("cannot move the installation into place: {source}"),
-            &paths,
-            false,
-        );
+    if is_vendor {
+        // The staging directory holds at most the Inno install log and the
+        // vendor installer already wrote the final directory: remove the
+        // staging debris best-effort (the log may still be held open by a
+        // dying installer; a leftover staging directory never blocks
+        // validation and rollback would have removed it anyway).
+        let _ = fs::remove_dir_all(&staging_dir);
+    } else {
+        // Never overwrite an existing version directory
+        // (version-management.md §2 rule 1). (The vendor branch checked
+        // this before running the installer.)
+        if final_dir.exists() {
+            return finish.failed(
+                current,
+                ErrorCode::InstallFailed,
+                "target version directory already exists; repair = uninstall + reinstall",
+                &paths,
+                false,
+            );
+        }
+        if let Err(source) = fs::rename(&staging_dir, &final_dir) {
+            return finish.failed(
+                current,
+                ErrorCode::InstallFailed,
+                &format!("cannot move the installation into place: {source}"),
+                &paths,
+                false,
+            );
+        }
     }
     paths.final_dir = Some(final_dir);
 
-    let executable = non_empty(&artifact.executable_relative_path).map(str::to_owned);
-    let archive_root = non_empty(&artifact.archive_root).map(str::to_owned);
     let installed_at = match devkit_registry::error::now_utc_rfc3339() {
         Ok(value) => value,
         Err(error) => {
@@ -773,25 +1158,19 @@ where
         }
     };
     let receipt = InstallReceipt {
-        receipt_version: 1,
+        receipt_version: 2,
         package_id: package_id.to_owned(),
         version: version.to_owned(),
-        installer: "archive".to_owned(),
-        archive: ArchiveReceipt {
-            format: format_label(format),
-            sha256_hex: downloaded.sha256_hex,
-            size_bytes: downloaded.size_bytes,
-        },
+        installer: match artifact.installer {
+            InstallerKind::Exe => "exe",
+            InstallerKind::Msi => "msi",
+            _ => "archive",
+        }
+        .to_owned(),
+        archive: archive_receipt,
+        vendor: vendor_receipt,
         install_path: final_rel.to_string_lossy().into_owned(),
-        files: extract
-            .files
-            .iter()
-            .map(|file| ReceiptFile {
-                relative_path: file.relative_path.to_string_lossy().into_owned(),
-                size_bytes: file.size_bytes,
-                sha256_hex: file.sha256_hex.clone(),
-            })
-            .collect(),
+        files,
         executable_relative_path: executable,
         archive_root,
         job_id: job_id.to_owned(),
@@ -883,7 +1262,11 @@ where
         &format!(
             "Installation complete: {} files, {} bytes",
             receipt.files.len(),
-            receipt.archive.size_bytes
+            receipt
+                .files
+                .iter()
+                .map(|file| file.size_bytes)
+                .sum::<u64>()
         ),
         None,
     )?;
@@ -1026,11 +1409,22 @@ pub enum UninstallOutcome {
 /// consent dialog for uninstalling the *active* version is a UI
 /// responsibility (DESIGN.md §8); this function only reports what it
 /// cleared.
+///
+/// P3-07: for `msi` receipts the receipt-driven vendor uninstall runs
+/// first — `msiexec /x {ProductCode} /qn /norestart` with the injected
+/// runner — so the Windows Installer registration goes away together
+/// with the directory (no ghost ARP entry). Exit 0/3010 = uninstalled;
+/// 1605 ("product not registered") falls through to the directory
+/// removal only; any other code fails the uninstall with the row's
+/// status restored. The vendor uninstall is not cancellable (fresh
+/// token): it is a local, silent, quick operation, and aborting it
+/// halfway would leave a worse state than finishing it.
 pub fn uninstall_version(
     managed_root: &Path,
     conn: &Connection,
     package_id: &str,
     version: &str,
+    vendor_runner: &dyn ExeRunner,
 ) -> Result<UninstallOutcome, JobsError> {
     let repo = InstalledRepo::new(conn);
     let Some(record) = repo.get(package_id, version)? else {
@@ -1050,6 +1444,38 @@ pub fn uninstall_version(
 
     // `removing` while files are deleted (schema status values).
     repo.update_status(package_id, version, InstalledStatus::Removing)?;
+
+    // Receipt-driven vendor uninstall (msi receipts only).
+    if receipt.installer == "msi" {
+        let Some(product_code) = receipt.vendor.as_ref().and_then(|part| part.product_code.as_deref()) else {
+            repo.update_status(package_id, version, record.status)?;
+            return Err(JobsError::Internal(
+                "msi receipt has no ProductCode to uninstall with".to_owned(),
+            ));
+        };
+        let undo_cancel = CancelToken::from_shared(Arc::new(AtomicBool::new(false)));
+        let (program, flags) = build_uninstall_command(&msiexec_program(), product_code);
+        let uninstall_result = match vendor_runner.run(&program, &flags, &undo_cancel) {
+            Ok(outcome) if outcome.cancelled => Err("msiexec /x was cancelled".to_owned()),
+            Ok(outcome) if outcome.exit_code == Some(MSI_EXIT_UNKNOWN_PRODUCT) => {
+                // Not registered (e.g. our rollback already undid it, or
+                // a foreign cleanup): only the managed directory remains.
+                Ok(())
+            }
+            Ok(outcome) if msi_is_success_exit_code(outcome.exit_code) => Ok(()),
+            Ok(outcome) => Err(format!(
+                "msiexec /x did not succeed (exit code {:?})",
+                outcome.exit_code
+            )),
+            Err(error) => Err(error.to_string()),
+        };
+        if let Err(message) = uninstall_result {
+            // Restore the row's status; the user can retry.
+            let _ = repo.update_status(package_id, version, record.status);
+            return Err(JobsError::Vendor(message));
+        }
+    }
+
     let cleared_active = repo.clear_active_if_points_at(package_id, version)?;
     if cleared_active {
         // The shim (if any) pointed at this version; best-effort cleanup —

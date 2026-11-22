@@ -53,9 +53,9 @@ use devkit_download::{
 };
 use devkit_install::{
     build_command, build_uninstall_command, detect_format, detect_technology_from_file,
-    ensure_within, extract_file, is_msi_package_file, msi_build_command,
-    msi_is_success_exit_code, msiexec_program, read_product_code, walk_installed_files, ArchiveFormat, ArchiveLimits, ExeRunner,
-    ExeTechnology, MSI_EXIT_UNKNOWN_PRODUCT,
+    ensure_within, extract_file, is_msi_package_file, msi_build_command, msi_is_success_exit_code,
+    msiexec_program, read_product_code, walk_installed_files, ArchiveFormat, ArchiveLimits,
+    ExeRunner, ExeTechnology, MSI_EXIT_UNKNOWN_PRODUCT,
 };
 use devkit_registry::{
     package_cache::PackageCache, Database, InstalledRecord, InstalledRepo, InstalledStatus,
@@ -774,10 +774,7 @@ where
     // ------------------------------------------------------------------
     // EXTRACTING (archive adapter) / INSTALLING (vendor adapters)
     // ------------------------------------------------------------------
-    let is_vendor = matches!(
-        artifact.installer,
-        InstallerKind::Exe | InstallerKind::Msi
-    );
+    let is_vendor = matches!(artifact.installer, InstallerKind::Exe | InstallerKind::Msi);
     let executable = non_empty(&artifact.executable_relative_path).map(str::to_owned);
     let mut archive_root = non_empty(&artifact.archive_root).map(str::to_owned);
 
@@ -1447,7 +1444,11 @@ pub fn uninstall_version(
 
     // Receipt-driven vendor uninstall (msi receipts only).
     if receipt.installer == "msi" {
-        let Some(product_code) = receipt.vendor.as_ref().and_then(|part| part.product_code.as_deref()) else {
+        let Some(product_code) = receipt
+            .vendor
+            .as_ref()
+            .and_then(|part| part.product_code.as_deref())
+        else {
             repo.update_status(package_id, version, record.status)?;
             return Err(JobsError::Internal(
                 "msi receipt has no ProductCode to uninstall with".to_owned(),

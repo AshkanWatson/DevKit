@@ -1,0 +1,92 @@
+   Compiling devkit-jobs v0.1.0 (D:\Code\Rust\DevKit\crates\devkit-jobs)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.40s
+     Running unittests src\lib.rs (target\debug\deps\devkit_jobs-be5c6dac6d728e27.exe)
+
+running 5 tests
+test state::tests::failure_and_cancellation_are_reachable_from_active_stages ... ok
+test state::tests::pause_is_download_only ... ok
+test state::tests::happy_path_chain_is_allowed ... ok
+test state::tests::rollback_chain_is_allowed_and_terminal_states_stop ... ok
+test state::tests::wire_forms_are_stable ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\activation.rs (target\debug\deps\activation-7db1b4f76e8391a6.exe)
+
+running 9 tests
+test already_present_path_entry_is_not_appended_again ... ok
+test library_package_activates_without_shim ... ok
+test plan_shows_shims_path_change_and_previous_active ... ok
+test remove_shims_referencing_deletes_only_matching_shims ... ok
+test declined_consent_changes_nothing ... ok
+test failed_path_write_rolls_back_mapping_and_shim ... ok
+test granted_activation_switches_mapping_shim_and_path_once ... ok
+test activation_refuses_unknown_install_and_broken_rows ... ok
+test uninstalling_the_active_version_removes_its_shim ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
+
+     Running tests\exe_install.rs (target\debug\deps\exe_install-61b16f08f813ec1f.exe)
+
+running 9 tests
+test zzz_stub_child_installer ... ok
+test process_runner_reports_spawn_failures ... ok
+
+running 1 test
+test zzz_stub_child_installer ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.00s
+
+test process_runner_runs_a_child_to_completion ... ok
+test failing_installer_rolls_back_cleanly ... ok
+
+running 1 test
+test nsis_installer_runs_with_the_fixed_flags_and_registers ... ok
+test cancelling_during_the_installer_rolls_back ... ok
+test inno_installer_runs_with_the_fixed_flags_and_registers ... ok
+test unknown_technology_fails_without_running_the_installer ... ok
+test process_runner_kills_the_child_on_cancel ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
+
+     Running tests\jobs.rs (target\debug\deps\jobs-95eb49874ce05f68.exe)
+
+running 11 tests
+test progress_never_leaves_the_unit_interval ... ok
+test queued_event_is_seq_one ... ok
+test pre_cancelled_job_rolls_back ... ok
+test happy_path_completes_with_contiguous_events ... ok
+test failure_at_stage_triggers_rollback_with_stable_code ... ok
+test dropping_the_manager_joins_running_jobs ... ok
+test orphaned_jobs_are_recovered_on_open ... ok
+test cancellation_during_run_is_accepted_then_rolls_back ... ok
+test terminal_jobs_are_not_recovered ... ok
+test events_replay_after_restart ... ok
+test retry_creates_new_job_and_keeps_old_history ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.43s
+
+     Running tests\real_install.rs (target\debug\deps\real_install-1d86fdfcba0667a9.exe)
+
+running 12 tests
+test registry_source_resolves_the_current_platform_artifact_from_the_catalog_cache ... ok
+test recovery_removes_abandoned_staging_data_and_installing_rows ... ok
+test version_not_found_fails_with_the_stable_code_and_rolls_back ... ok
+test checksum_mismatch_fails_with_integrity_code_and_rolls_back_clean ... ok
+test non_supported_installer_kinds_are_rejected_before_any_network_work ... ok
+test validate_installation_rejects_tampered_files_and_missing_entry_points ... ok
+test end_to_end_install_downloads_extracts_registers_and_validates ... ok
+test validation_failure_rolls_back_the_registered_receipt_and_files ... ok
+test uninstalling_the_active_version_clears_the_active_mapping ... ok
+test reinstalling_an_installed_version_is_idempotent ... ok
+test side_by_side_versions_coexist_as_separate_receipts_and_uninstall_is_exact ... ok
+test cancellation_mid_download_stops_and_rolls_back_clean ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.15s
+
+   Doc-tests devkit_jobs
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

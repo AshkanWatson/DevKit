@@ -24,7 +24,7 @@ use devkit_core::manifest::{
     PackageVersion, Platform, VersionPolicyName, SUPPORTED_SCHEMA_VERSION,
 };
 use devkit_download::ReqwestDownloadHttp;
-use devkit_install::ArchiveLimits;
+use devkit_install::{ArchiveLimits, ProcessExeRunner};
 use devkit_jobs::pipeline::{InstallReceipt, InstallSource, RealInstallConfig, StageFailure};
 use devkit_jobs::{JobManager, RunOutcome, Stage, UninstallOutcome};
 use devkit_registry::installed::InstalledRepo;
@@ -194,9 +194,14 @@ fn main() {
     }
 
     // Uninstall removes exactly this version again (reversibility).
-    let removed =
-        devkit_jobs::uninstall_version(managed_root.path(), db.connection(), PACKAGE_ID, VERSION)
-            .expect("uninstall");
+    let removed = devkit_jobs::uninstall_version(
+        managed_root.path(),
+        db.connection(),
+        PACKAGE_ID,
+        VERSION,
+        &ProcessExeRunner,
+    )
+    .expect("uninstall");
     let UninstallOutcome::Removed { files_removed, .. } = removed else {
         panic!("expected Removed, got {removed:?}");
     };

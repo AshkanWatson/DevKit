@@ -413,9 +413,9 @@ fn inno_installer_runs_with_the_fixed_flags_and_registers() {
     assert_eq!(receipt.receipt_version, 2);
     assert_eq!(receipt.installer, "exe");
     assert!(receipt.archive.is_none());
-    let exe = receipt.exe.as_ref().unwrap();
-    assert_eq!(exe.technology, "inno-setup");
-    assert_eq!(exe.exit_code, Some(0));
+    let vendor = receipt.vendor.as_ref().unwrap();
+    assert_eq!(vendor.technology, "inno-setup");
+    assert_eq!(vendor.exit_code, Some(0));
     assert_eq!(
         slashed(&receipt.install_path),
         format!("packages/{PACKAGE_ID}/1.0.0")
@@ -427,6 +427,8 @@ fn inno_installer_runs_with_the_fixed_flags_and_registers() {
         .find(|file| slashed(&file.relative_path) == "bin/tool.exe")
         .unwrap();
     assert_eq!(tool.size_bytes, 6);
+    // Receipt v2: vendor part instead of exe part.
+    assert!(receipt.vendor.is_some());
     assert_eq!(tool.sha256_hex, sha256_hex(b"MZtool"));
     assert_eq!(
         receipt
@@ -455,6 +457,7 @@ fn inno_installer_runs_with_the_fixed_flags_and_registers() {
         env.db().connection(),
         PACKAGE_ID,
         "1.0.0",
+        &ProcessExeRunner,
     )
     .unwrap();
     assert!(
@@ -501,9 +504,9 @@ fn nsis_installer_runs_with_the_fixed_flags_and_registers() {
 
     let receipt: InstallReceipt =
         serde_json::from_str(&repo_row(&env, "1.0.0").unwrap().receipt_json).unwrap();
-    let exe = receipt.exe.as_ref().unwrap();
-    assert_eq!(exe.technology, "nsis");
-    assert_eq!(exe.exit_code, Some(0));
+    let vendor = receipt.vendor.as_ref().unwrap();
+    assert_eq!(vendor.technology, "nsis");
+    assert_eq!(vendor.exit_code, Some(0));
     assert!(receipt.archive.is_none());
     assert_eq!(receipt.files.len(), 1);
     assert!(validate_installation(env.managed_root.path(), &receipt).is_ok());

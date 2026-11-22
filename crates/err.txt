@@ -1,0 +1,2 @@
+    Checking devkit_bridge v0.1.0 (D:\Code\Rust\DevKit\crates\devkit-bridge)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.08s

@@ -18,6 +18,7 @@ use devkit_core::manifest::{
     Architecture, Artifact, ArtifactOs, Category, Channel, InstallerKind, PackageManifest,
     PackageVersion, Platform, VersionPolicyName, SUPPORTED_SCHEMA_VERSION,
 };
+use devkit_install::ProcessExeRunner;
 use devkit_jobs::environment::{
     activate, plan_activation, remove_shims_referencing, ActivationConsent, PathChange,
     PathEnvironment, SHIMS_DIR,
@@ -220,7 +221,7 @@ fn seed_installed(env: &TestEnv, package_id: &str, version: &str, executable: Op
             sha256_hex: sha256_hex(b"unused"),
             size_bytes: 0,
         }),
-        exe: None,
+        vendor: None,
         install_path: install_path.clone(),
         files,
         executable_relative_path: executable.map(str::to_owned),
@@ -592,8 +593,14 @@ fn uninstalling_the_active_version_removes_its_shim() {
 
     // Uninstall the active version → its shim is dangling, remove it.
     activate_1_0(&env, &path_env);
-    let outcome =
-        uninstall_version(env.path(), env.db().connection(), PACKAGE_ID, "1.0.0").unwrap();
+    let outcome = uninstall_version(
+        env.path(),
+        env.db().connection(),
+        PACKAGE_ID,
+        "1.0.0",
+        &ProcessExeRunner,
+    )
+    .unwrap();
     assert!(matches!(
         outcome,
         UninstallOutcome::Removed {
@@ -615,8 +622,14 @@ fn uninstalling_the_active_version_removes_its_shim() {
     )
     .unwrap();
     seed_installed(&env, PACKAGE_ID, "1.0.0", Some("app/bin/tool.exe"));
-    let outcome =
-        uninstall_version(env.path(), env.db().connection(), PACKAGE_ID, "1.0.0").unwrap();
+    let outcome = uninstall_version(
+        env.path(),
+        env.db().connection(),
+        PACKAGE_ID,
+        "1.0.0",
+        &ProcessExeRunner,
+    )
+    .unwrap();
     assert!(matches!(
         outcome,
         UninstallOutcome::Removed {

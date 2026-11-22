@@ -7,6 +7,7 @@
 //! (`installed`/`broken`); transient `installing`/`removing` rows belong
 //! to a running job (the Downloads screen shows that job).
 
+use devkit_install::ProcessExeRunner;
 use devkit_jobs::environment::{
     default_path_environment, plan_activation, ActivationConsent, PathChange,
 };
@@ -303,7 +304,13 @@ pub fn remove_managed_version(
     version: String,
 ) -> Result<RemovalResultDto, BridgeError> {
     let db = open_db()?;
-    match uninstall_version(managed_root()?, db.connection(), &package_id, &version) {
+    match uninstall_version(
+        managed_root()?,
+        db.connection(),
+        &package_id,
+        &version,
+        &ProcessExeRunner,
+    ) {
         Ok(outcome) => Ok(match outcome {
             UninstallOutcome::NotFound => RemovalResultDto {
                 found: false,

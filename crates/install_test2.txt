@@ -1,0 +1,83 @@
+warning: variable does not need to be mutable
+   --> devkit-install\src\msi.rs:437:17
+    |
+437 |             let mut record = MsiCreateRecord(2);
+    |                 ----^^^^^^
+    |                 |
+    |                 help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: `devkit-install` (lib test) generated 1 warning (run `cargo fix --lib -p devkit-install --tests` to apply 1 suggestion)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.46s
+     Running unittests src\lib.rs (target\debug\deps\devkit_install-a71137bfae790c19.exe)
+
+running 28 tests
+test exe::tests::labels_round_trip ... ok
+test exe::tests::catalog_text_never_reaches_the_command_line ... ok
+test exe::tests::non_pe_bytes_are_never_detected ... ok
+test exe::tests::detects_inno_and_nsis_markers ... ok
+test exe::tests::inno_flags_come_from_the_contract_table ... ok
+test exe::tests::nsis_dir_flag_is_last_and_unquoted ... ok
+test exe::tests::nsis_flags_come_from_the_contract_table ... ok
+test exe::tests::markers_are_case_sensitive ... ok
+test msi::tests::catalog_text_never_reaches_the_command_line ... ok
+test msi::tests::detects_the_ole_container_magic ... ok
+test msi::tests::install_flags_come_from_the_contract_table ... ok
+test msi::tests::msiexec_is_resolved_outside_path ... ok
+test msi::tests::success_codes_match_the_contract ... ok
+test msi::tests::uninstall_flags_come_from_the_contract_table ... ok
+test path::tests::accepts_canonical_relative_paths ... ok
+test path::tests::containment_check_rejects_escaping_joins ... ok
+test path::tests::rejects_empty_and_non_canonical ... ok
+test path::tests::rejects_reserved_names_and_lossy_components ... ok
+test path::tests::rejects_traversal_and_absolute_entries ... ok
+test exe::tests::walk_of_empty_directory_is_empty ... ok
+test exe::tests::streaming_detection_matches_in_memory_detection ... ok
+test exe::tests::streaming_detection_rejects_non_pe_files ... ok
+test msi::tests::read_product_code_refuses_non_msi_files ... ok
+test exe::tests::walk_records_files_with_sizes_and_hashes ... ok
+test msi::tests::streaming_detection_reads_only_the_first_eight_bytes ... ok
+test msi::tests::read_product_code_round_trips_a_real_msi_database ... ok
+test msi::tests::read_product_code_reports_a_package_without_the_property ... ok
+test exe::tests::streaming_detection_finds_markers_across_chunk_boundaries ... ok
+
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+
+     Running tests\archive_extraction.rs (target\debug\deps\archive_extraction-e6e896488be4bae1.exe)
+
+running 14 tests
+test non_archive_bytes_are_reported_as_unsupported ... ok
+test cancellation_before_the_start_leaves_staging_empty ... ok
+test truncated_zip_is_reported_as_malformed ... ok
+test late_traversal_entry_quarantines_the_partially_extracted_output ... ok
+test zip_slip_traversal_is_rejected_with_integrity_code_and_nothing_extracted ... ok
+test tar_traversal_entry_is_rejected ... ok
+test zip_symlink_entries_are_rejected ... ok
+test absolute_and_drive_letter_entries_are_rejected ... ok
+test tar_symlink_and_hardlink_entries_are_rejected ... ok
+test committed_tar_gz_fixture_extracts_identically ... ok
+test committed_zip_fixture_extracts_exactly_where_the_receipt_says ... ok
+test file_count_limit_is_enforced ... ok
+test zip_bomb_is_caught_by_the_compression_ratio_pre_scan ... ok
+test tar_total_size_limit_is_enforced_while_streaming ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.19s
+
+     Running tests\entry_path_property.rs (target\debug\deps\entry_path_property-6fddfd0fff81ccc4.exe)
+
+running 5 tests
+test backslash_form_of_traversal_is_rejected ... ok
+test benign_paths_validate_and_stay_under_the_staging_root ... ok
+test leading_separator_is_always_rejected ... ok
+test injected_parent_traversal_is_always_rejected ... ok
+test drive_letter_is_always_rejected ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+   Doc-tests devkit_install
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -37,7 +37,7 @@ use windows_sys::Win32::Foundation::{ERROR_MORE_DATA, ERROR_NO_MORE_ITEMS, ERROR
 #[cfg(windows)]
 use windows_sys::Win32::System::ApplicationInstallationAndServicing::{
     MsiCloseHandle, MsiDatabaseOpenViewW, MsiOpenDatabaseW, MsiRecordGetStringW, MsiViewClose,
-    MsiViewExecute, MsiViewFetch, MSIHANDLE, MSIDBOPEN_READONLY,
+    MsiViewExecute, MsiViewFetch, MSIDBOPEN_READONLY, MSIHANDLE,
 };
 
 /// OLE compound document magic: every `.msi` container starts with it.
@@ -203,7 +203,9 @@ pub fn read_product_code(msi_path: &Path) -> Result<String, MsiError> {
         )?;
     }
     let result = query_product_code(database);
-    unsafe { let _ = MsiCloseHandle(database); }
+    unsafe {
+        let _ = MsiCloseHandle(database);
+    }
     result
 }
 
@@ -222,19 +224,17 @@ fn query_product_code(database: MSIHANDLE) -> Result<String, MsiError> {
             MsiDatabaseOpenViewW(database, query_w.as_ptr(), &mut view),
         )?;
     }
-    let fetch = (|| {
-        unsafe {
-            check("MsiViewExecute", MsiViewExecute(view, 0))?;
-            let mut record: MSIHANDLE = 0;
-            let status = MsiViewFetch(view, &mut record);
-            if status == ERROR_NO_MORE_ITEMS {
-                return Err(MsiError::NoProductCode);
-            }
-            check("MsiViewFetch", status)?;
-            let value = record_string(record, 1);
-            let _ = MsiCloseHandle(record);
-            value
+    let fetch = (|| unsafe {
+        check("MsiViewExecute", MsiViewExecute(view, 0))?;
+        let mut record: MSIHANDLE = 0;
+        let status = MsiViewFetch(view, &mut record);
+        if status == ERROR_NO_MORE_ITEMS {
+            return Err(MsiError::NoProductCode);
         }
+        check("MsiViewFetch", status)?;
+        let value = record_string(record, 1);
+        let _ = MsiCloseHandle(record);
+        value
     })();
     unsafe {
         let _ = MsiViewClose(view);
@@ -251,9 +251,8 @@ fn record_string(record: MSIHANDLE, field: u32) -> Result<String, MsiError> {
         let mut buffer = vec![0_u16; capacity as usize];
         // SAFETY: `buffer` is valid for `capacity` characters and NUL
         // terminated by the callee on success.
-        let status = unsafe {
-            MsiRecordGetStringW(record, field, buffer.as_mut_ptr(), &mut capacity)
-        };
+        let status =
+            unsafe { MsiRecordGetStringW(record, field, buffer.as_mut_ptr(), &mut capacity) };
         match status {
             ERROR_SUCCESS => {
                 let end = buffer
@@ -281,7 +280,10 @@ fn check(function: &'static str, status: u32) -> Result<(), MsiError> {
     if status == ERROR_SUCCESS {
         Ok(())
     } else {
-        Err(MsiError::Api { function, code: status })
+        Err(MsiError::Api {
+            function,
+            code: status,
+        })
     }
 }
 
@@ -482,10 +484,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("tiny.msi");
         create_test_msi(&path, TEST_PRODUCT_CODE);
-        assert_eq!(
-            read_product_code(&path).unwrap(),
-            TEST_PRODUCT_CODE
-        );
+        assert_eq!(read_product_code(&path).unwrap(), TEST_PRODUCT_CODE);
     }
 
     #[cfg(windows)]
@@ -529,10 +528,7 @@ mod tests {
         let path = dir.path().join("garbage.bin");
         std::fs::write(&path, b"this is not a structured storage file at all").unwrap();
         let error = read_product_code(&path).unwrap_err();
-        assert!(
-            matches!(error, MsiError::Api { .. }),
-            "error: {error}"
-        );
+        assert!(matches!(error, MsiError::Api { .. }), "error: {error}");
         assert_eq!(error.code(), ErrorCode::InstallFailed);
     }
 }

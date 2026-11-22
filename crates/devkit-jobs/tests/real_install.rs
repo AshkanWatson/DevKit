@@ -580,6 +580,7 @@ fn side_by_side_versions_coexist_as_separate_receipts_and_uninstall_is_exact() {
         env.db().connection(),
         PACKAGE_ID,
         "1.0.0",
+        &ProcessExeRunner,
     )
     .unwrap();
     assert_eq!(
@@ -602,7 +603,8 @@ fn side_by_side_versions_coexist_as_separate_receipts_and_uninstall_is_exact() {
             env.managed_root.path(),
             env.db().connection(),
             PACKAGE_ID,
-            "1.0.0"
+            "1.0.0",
+            &ProcessExeRunner
         )
         .unwrap(),
         UninstallOutcome::NotFound
@@ -635,6 +637,7 @@ fn uninstalling_the_active_version_clears_the_active_mapping() {
         env.db().connection(),
         PACKAGE_ID,
         "2.0.0",
+        &ProcessExeRunner,
     )
     .unwrap();
     assert_eq!(

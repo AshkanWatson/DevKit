@@ -617,13 +617,26 @@ fn shim_plans(receipt: &InstallReceipt) -> Result<Vec<ShimPlan>, StageFailure> {
     }])
 }
 
-/// The absolute, normal shims-directory path (the user-PATH entry). The
-/// canonicalize verbatim prefix (`\\?\`) is stripped so the entry is a
-/// plain usable path in shells.
+/// The absolute, normal shims-directory path (the user-PATH entry).
+///
+/// Built **lexically** from the (already absolute) managed root — never via
+/// `canonicalize()`. Canonicalizing here is unstable: on macOS `/var` is a
+/// symlink to `/private/var`, and `canonicalize()` only resolves it once the
+/// shims directory exists. The first activation (dir absent) would store
+/// `/var/folders/.../shims` while the second (dir present) computes
+/// `/private/var/folders/.../shims`, so idempotence detection fails and the
+/// entry is appended twice. A lexical path is stable across both states.
 fn shims_dir_entry(managed_root: &Path) -> String {
-    normalize_absolute(&managed_root.join(SHIMS_DIR))
-        .to_string_lossy()
-        .into_owned()
+    let entry = managed_root.join(SHIMS_DIR);
+    let text = entry.to_string_lossy();
+    if let Some(rest) = text.strip_prefix(r"\\?\") {
+        // Strip a drive-letter verbatim prefix if one was supplied.
+        let bytes = rest.as_bytes();
+        if bytes.len() >= 2 && bytes[1] == b':' {
+            return rest.to_owned();
+        }
+    }
+    text.into_owned()
 }
 
 fn normalize_absolute(path: &Path) -> PathBuf {

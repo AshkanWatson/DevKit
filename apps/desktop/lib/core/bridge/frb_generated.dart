@@ -9,6 +9,7 @@ import 'api/engine.dart';
 import 'api/error.dart';
 import 'api/installed.dart';
 import 'api/jobs.dart';
+import 'api/profiles.dart';
 import 'api/simple.dart';
 
 import 'dart:async';
@@ -75,7 +76,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -986572370;
+  int get rustContentHash => -986315241;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -87,7 +88,14 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
+  Future<ProfileApplyResultDto> crateApiProfilesApplyProfile({
+    required String profileId,
+    required List<String> selectedPackageIds,
+  });
+
   Future<CancelJobResult> crateApiJobsCancelJob({required String jobId});
+
+  Future<bool> crateApiProfilesDeletePersonalProfile({required String id});
 
   Future<AppInfo> crateApiGetAppInfo();
 
@@ -122,14 +130,29 @@ abstract class RustLibApi extends BaseApi {
 
   Future<List<JobDto>> crateApiJobsListJobs();
 
+  Future<List<CatalogProfileDto>> crateApiProfilesListPersonalProfiles();
+
   Future<ActivationPlanDto> crateApiInstalledPlanActivationFor({
     required String packageId,
     required String version,
   });
 
+  Future<ProjectPlanDto> crateApiProfilesPlanProject({
+    required String projectJson,
+    String? profileId,
+  });
+
   Future<RemovalResultDto> crateApiInstalledRemoveManagedVersion({
     required String packageId,
     required String version,
+  });
+
+  Future<ProfileResolutionDto> crateApiProfilesResolveProfile({
+    required String profileId,
+  });
+
+  Future<CatalogProfileDto> crateApiProfilesSavePersonalProfile({
+    required String manifestJson,
   });
 
   Future<List<CatalogPackageDto>> crateApiCatalogSearchCatalog({
@@ -169,6 +192,41 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   });
 
   @override
+  Future<ProfileApplyResultDto> crateApiProfilesApplyProfile({
+    required String profileId,
+    required List<String> selectedPackageIds,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(profileId, serializer);
+          sse_encode_list_String(selectedPackageIds, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 1,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_profile_apply_result_dto,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiProfilesApplyProfileConstMeta,
+        argValues: [profileId, selectedPackageIds],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiProfilesApplyProfileConstMeta =>
+      const TaskConstMeta(
+        debugName: "apply_profile",
+        argNames: ["profileId", "selectedPackageIds"],
+      );
+
+  @override
   Future<CancelJobResult> crateApiJobsCancelJob({required String jobId}) {
     return handler.executeNormal(
       NormalTask(
@@ -178,7 +236,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 1,
+            funcId: 2,
             port: port_,
           );
         },
@@ -197,6 +255,37 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "cancel_job", argNames: ["jobId"]);
 
   @override
+  Future<bool> crateApiProfilesDeletePersonalProfile({required String id}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 3,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiProfilesDeletePersonalProfileConstMeta,
+        argValues: [id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiProfilesDeletePersonalProfileConstMeta =>
+      const TaskConstMeta(
+        debugName: "delete_personal_profile",
+        argNames: ["id"],
+      );
+
+  @override
   Future<AppInfo> crateApiGetAppInfo() {
     return handler.executeNormal(
       NormalTask(
@@ -205,7 +294,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 2,
+            funcId: 4,
             port: port_,
           );
         },
@@ -232,7 +321,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 3,
+            funcId: 5,
             port: port_,
           );
         },
@@ -260,7 +349,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 4,
+            funcId: 6,
             port: port_,
           );
         },
@@ -292,7 +381,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 5,
+            funcId: 7,
             port: port_,
           );
         },
@@ -324,7 +413,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 8,
             port: port_,
           );
         },
@@ -354,7 +443,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 9,
             port: port_,
           );
         },
@@ -379,7 +468,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(name, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -404,7 +493,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 9,
+            funcId: 11,
             port: port_,
           );
         },
@@ -433,7 +522,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 10,
+            funcId: 12,
             port: port_,
           );
         },
@@ -462,7 +551,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 13,
             port: port_,
           );
         },
@@ -489,7 +578,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 12,
+            funcId: 14,
             port: port_,
           );
         },
@@ -519,7 +608,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 13,
+            funcId: 15,
             port: port_,
           );
         },
@@ -549,7 +638,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 14,
+            funcId: 16,
             port: port_,
           );
         },
@@ -568,6 +657,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "list_jobs", argNames: []);
 
   @override
+  Future<List<CatalogProfileDto>> crateApiProfilesListPersonalProfiles() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 17,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_catalog_profile_dto,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiProfilesListPersonalProfilesConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiProfilesListPersonalProfilesConstMeta =>
+      const TaskConstMeta(debugName: "list_personal_profiles", argNames: []);
+
+  @override
   Future<ActivationPlanDto> crateApiInstalledPlanActivationFor({
     required String packageId,
     required String version,
@@ -581,7 +697,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 15,
+            funcId: 18,
             port: port_,
           );
         },
@@ -603,6 +719,41 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<ProjectPlanDto> crateApiProfilesPlanProject({
+    required String projectJson,
+    String? profileId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(projectJson, serializer);
+          sse_encode_opt_String(profileId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 19,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_project_plan_dto,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiProfilesPlanProjectConstMeta,
+        argValues: [projectJson, profileId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiProfilesPlanProjectConstMeta =>
+      const TaskConstMeta(
+        debugName: "plan_project",
+        argNames: ["projectJson", "profileId"],
+      );
+
+  @override
   Future<RemovalResultDto> crateApiInstalledRemoveManagedVersion({
     required String packageId,
     required String version,
@@ -616,7 +767,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 16,
+            funcId: 20,
             port: port_,
           );
         },
@@ -638,6 +789,72 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<ProfileResolutionDto> crateApiProfilesResolveProfile({
+    required String profileId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(profileId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 21,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_profile_resolution_dto,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiProfilesResolveProfileConstMeta,
+        argValues: [profileId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiProfilesResolveProfileConstMeta =>
+      const TaskConstMeta(
+        debugName: "resolve_profile",
+        argNames: ["profileId"],
+      );
+
+  @override
+  Future<CatalogProfileDto> crateApiProfilesSavePersonalProfile({
+    required String manifestJson,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(manifestJson, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 22,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_catalog_profile_dto,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiProfilesSavePersonalProfileConstMeta,
+        argValues: [manifestJson],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiProfilesSavePersonalProfileConstMeta =>
+      const TaskConstMeta(
+        debugName: "save_personal_profile",
+        argNames: ["manifestJson"],
+      );
+
+  @override
   Future<List<CatalogPackageDto>> crateApiCatalogSearchCatalog({
     String? query,
     String? category,
@@ -651,7 +868,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 17,
+            funcId: 23,
             port: port_,
           );
         },
@@ -688,7 +905,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 18,
+            funcId: 24,
             port: port_,
           );
         },
@@ -723,7 +940,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 19,
+            funcId: 25,
             port: port_,
           );
         },
@@ -755,7 +972,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 20,
+            funcId: 26,
             port: port_,
           );
         },
@@ -790,7 +1007,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 21,
+              funcId: 27,
               port: port_,
             );
           },
@@ -824,7 +1041,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 22,
+              funcId: 28,
               port: port_,
             );
           },
@@ -1256,9 +1473,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<ProfileApplyJobDto> dco_decode_list_profile_apply_job_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_profile_apply_job_dto)
+        .toList();
+  }
+
+  @protected
+  List<ProjectPinDto> dco_decode_list_project_pin_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_project_pin_dto).toList();
+  }
+
+  @protected
+  List<ResolvedProfilePackageDto> dco_decode_list_resolved_profile_package_dto(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_resolved_profile_package_dto)
+        .toList();
+  }
+
+  @protected
   List<ShimPlanDto> dco_decode_list_shim_plan_dto(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_shim_plan_dto).toList();
+  }
+
+  @protected
+  List<SkippedProfilePackageDto> dco_decode_list_skipped_profile_package_dto(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_skipped_profile_package_dto)
+        .toList();
   }
 
   @protected
@@ -1307,6 +1558,79 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ProfileApplyJobDto dco_decode_profile_apply_job_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return ProfileApplyJobDto(
+      packageId: dco_decode_String(arr[0]),
+      version: dco_decode_String(arr[1]),
+      jobId: dco_decode_String(arr[2]),
+    );
+  }
+
+  @protected
+  ProfileApplyResultDto dco_decode_profile_apply_result_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return ProfileApplyResultDto(
+      profileId: dco_decode_String(arr[0]),
+      jobs: dco_decode_list_profile_apply_job_dto(arr[1]),
+      skipped: dco_decode_list_skipped_profile_package_dto(arr[2]),
+    );
+  }
+
+  @protected
+  ProfileResolutionDto dco_decode_profile_resolution_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return ProfileResolutionDto(
+      profileId: dco_decode_String(arr[0]),
+      packages: dco_decode_list_resolved_profile_package_dto(arr[1]),
+      skipped: dco_decode_list_skipped_profile_package_dto(arr[2]),
+    );
+  }
+
+  @protected
+  ProfileSkipReasonDto dco_decode_profile_skip_reason_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ProfileSkipReasonDto.values[raw as int];
+  }
+
+  @protected
+  ProjectPinDto dco_decode_project_pin_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return ProjectPinDto(
+      packageId: dco_decode_String(arr[0]),
+      version: dco_decode_String(arr[1]),
+      source: dco_decode_String(arr[2]),
+      currentActive: dco_decode_opt_String(arr[3]),
+      changeNeeded: dco_decode_bool(arr[4]),
+    );
+  }
+
+  @protected
+  ProjectPlanDto dco_decode_project_plan_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return ProjectPlanDto(
+      projectName: dco_decode_String(arr[0]),
+      pins: dco_decode_list_project_pin_dto(arr[1]),
+      unresolved: dco_decode_list_String(arr[2]),
+    );
+  }
+
+  @protected
   RemovalResultDto dco_decode_removal_result_dto(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -1320,6 +1644,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ResolvedProfilePackageDto dco_decode_resolved_profile_package_dto(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return ResolvedProfilePackageDto(
+      packageId: dco_decode_String(arr[0]),
+      required_: dco_decode_bool(arr[1]),
+      policy: dco_decode_String(arr[2]),
+      version: dco_decode_String(arr[3]),
+    );
+  }
+
+  @protected
   ShimPlanDto dco_decode_shim_plan_dto(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -1328,6 +1668,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     return ShimPlanDto(
       shimRelativePath: dco_decode_String(arr[0]),
       targetRelativePath: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
+  SkippedProfilePackageDto dco_decode_skipped_profile_package_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return SkippedProfilePackageDto(
+      packageId: dco_decode_String(arr[0]),
+      reason: dco_decode_profile_skip_reason_dto(arr[1]),
     );
   }
 
@@ -1940,6 +2292,48 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<ProfileApplyJobDto> sse_decode_list_profile_apply_job_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ProfileApplyJobDto>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_profile_apply_job_dto(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<ProjectPinDto> sse_decode_list_project_pin_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ProjectPinDto>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_project_pin_dto(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<ResolvedProfilePackageDto> sse_decode_list_resolved_profile_package_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ResolvedProfilePackageDto>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_resolved_profile_package_dto(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<ShimPlanDto> sse_decode_list_shim_plan_dto(
     SseDeserializer deserializer,
   ) {
@@ -1949,6 +2343,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <ShimPlanDto>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_shim_plan_dto(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<SkippedProfilePackageDto> sse_decode_list_skipped_profile_package_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <SkippedProfilePackageDto>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_skipped_profile_package_dto(deserializer));
     }
     return ans_;
   }
@@ -2016,6 +2424,92 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ProfileApplyJobDto sse_decode_profile_apply_job_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_packageId = sse_decode_String(deserializer);
+    var var_version = sse_decode_String(deserializer);
+    var var_jobId = sse_decode_String(deserializer);
+    return ProfileApplyJobDto(
+      packageId: var_packageId,
+      version: var_version,
+      jobId: var_jobId,
+    );
+  }
+
+  @protected
+  ProfileApplyResultDto sse_decode_profile_apply_result_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_profileId = sse_decode_String(deserializer);
+    var var_jobs = sse_decode_list_profile_apply_job_dto(deserializer);
+    var var_skipped = sse_decode_list_skipped_profile_package_dto(deserializer);
+    return ProfileApplyResultDto(
+      profileId: var_profileId,
+      jobs: var_jobs,
+      skipped: var_skipped,
+    );
+  }
+
+  @protected
+  ProfileResolutionDto sse_decode_profile_resolution_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_profileId = sse_decode_String(deserializer);
+    var var_packages = sse_decode_list_resolved_profile_package_dto(
+      deserializer,
+    );
+    var var_skipped = sse_decode_list_skipped_profile_package_dto(deserializer);
+    return ProfileResolutionDto(
+      profileId: var_profileId,
+      packages: var_packages,
+      skipped: var_skipped,
+    );
+  }
+
+  @protected
+  ProfileSkipReasonDto sse_decode_profile_skip_reason_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return ProfileSkipReasonDto.values[inner];
+  }
+
+  @protected
+  ProjectPinDto sse_decode_project_pin_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_packageId = sse_decode_String(deserializer);
+    var var_version = sse_decode_String(deserializer);
+    var var_source = sse_decode_String(deserializer);
+    var var_currentActive = sse_decode_opt_String(deserializer);
+    var var_changeNeeded = sse_decode_bool(deserializer);
+    return ProjectPinDto(
+      packageId: var_packageId,
+      version: var_version,
+      source: var_source,
+      currentActive: var_currentActive,
+      changeNeeded: var_changeNeeded,
+    );
+  }
+
+  @protected
+  ProjectPlanDto sse_decode_project_plan_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_projectName = sse_decode_String(deserializer);
+    var var_pins = sse_decode_list_project_pin_dto(deserializer);
+    var var_unresolved = sse_decode_list_String(deserializer);
+    return ProjectPlanDto(
+      projectName: var_projectName,
+      pins: var_pins,
+      unresolved: var_unresolved,
+    );
+  }
+
+  @protected
   RemovalResultDto sse_decode_removal_result_dto(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_found = sse_decode_bool(deserializer);
@@ -2029,6 +2523,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ResolvedProfilePackageDto sse_decode_resolved_profile_package_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_packageId = sse_decode_String(deserializer);
+    var var_required_ = sse_decode_bool(deserializer);
+    var var_policy = sse_decode_String(deserializer);
+    var var_version = sse_decode_String(deserializer);
+    return ResolvedProfilePackageDto(
+      packageId: var_packageId,
+      required_: var_required_,
+      policy: var_policy,
+      version: var_version,
+    );
+  }
+
+  @protected
   ShimPlanDto sse_decode_shim_plan_dto(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_shimRelativePath = sse_decode_String(deserializer);
@@ -2036,6 +2547,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     return ShimPlanDto(
       shimRelativePath: var_shimRelativePath,
       targetRelativePath: var_targetRelativePath,
+    );
+  }
+
+  @protected
+  SkippedProfilePackageDto sse_decode_skipped_profile_package_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_packageId = sse_decode_String(deserializer);
+    var var_reason = sse_decode_profile_skip_reason_dto(deserializer);
+    return SkippedProfilePackageDto(
+      packageId: var_packageId,
+      reason: var_reason,
     );
   }
 
@@ -2544,6 +3068,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_profile_apply_job_dto(
+    List<ProfileApplyJobDto> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_profile_apply_job_dto(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_project_pin_dto(
+    List<ProjectPinDto> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_project_pin_dto(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_resolved_profile_package_dto(
+    List<ResolvedProfilePackageDto> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_resolved_profile_package_dto(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_shim_plan_dto(
     List<ShimPlanDto> self,
     SseSerializer serializer,
@@ -2552,6 +3112,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_shim_plan_dto(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_skipped_profile_package_dto(
+    List<SkippedProfilePackageDto> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_skipped_profile_package_dto(item, serializer);
     }
   }
 
@@ -2622,6 +3194,72 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_profile_apply_job_dto(
+    ProfileApplyJobDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.packageId, serializer);
+    sse_encode_String(self.version, serializer);
+    sse_encode_String(self.jobId, serializer);
+  }
+
+  @protected
+  void sse_encode_profile_apply_result_dto(
+    ProfileApplyResultDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.profileId, serializer);
+    sse_encode_list_profile_apply_job_dto(self.jobs, serializer);
+    sse_encode_list_skipped_profile_package_dto(self.skipped, serializer);
+  }
+
+  @protected
+  void sse_encode_profile_resolution_dto(
+    ProfileResolutionDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.profileId, serializer);
+    sse_encode_list_resolved_profile_package_dto(self.packages, serializer);
+    sse_encode_list_skipped_profile_package_dto(self.skipped, serializer);
+  }
+
+  @protected
+  void sse_encode_profile_skip_reason_dto(
+    ProfileSkipReasonDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_project_pin_dto(
+    ProjectPinDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.packageId, serializer);
+    sse_encode_String(self.version, serializer);
+    sse_encode_String(self.source, serializer);
+    sse_encode_opt_String(self.currentActive, serializer);
+    sse_encode_bool(self.changeNeeded, serializer);
+  }
+
+  @protected
+  void sse_encode_project_plan_dto(
+    ProjectPlanDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.projectName, serializer);
+    sse_encode_list_project_pin_dto(self.pins, serializer);
+    sse_encode_list_String(self.unresolved, serializer);
+  }
+
+  @protected
   void sse_encode_removal_result_dto(
     RemovalResultDto self,
     SseSerializer serializer,
@@ -2633,10 +3271,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_resolved_profile_package_dto(
+    ResolvedProfilePackageDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.packageId, serializer);
+    sse_encode_bool(self.required_, serializer);
+    sse_encode_String(self.policy, serializer);
+    sse_encode_String(self.version, serializer);
+  }
+
+  @protected
   void sse_encode_shim_plan_dto(ShimPlanDto self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.shimRelativePath, serializer);
     sse_encode_String(self.targetRelativePath, serializer);
+  }
+
+  @protected
+  void sse_encode_skipped_profile_package_dto(
+    SkippedProfilePackageDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.packageId, serializer);
+    sse_encode_profile_skip_reason_dto(self.reason, serializer);
   }
 
   @protected

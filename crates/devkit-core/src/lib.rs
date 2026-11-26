@@ -5,6 +5,8 @@
 //! - [`error`]: the stable error-code model shared with the FFI contract
 //!   (docs/ffi/bridge-contract.md).
 //! - [`manifest`]: package/profile manifest parsing and validation (P1-03).
+//! - [`profile`]: profile resolution into a concrete install plan (P4-01).
+//! - [`project`]: project-level version pin resolution (P4-05).
 //!
 //! This crate must stay free of network, filesystem, and process access.
 //! Those capabilities live in dedicated crates in later phases so that
@@ -15,4 +17,6 @@
 
 pub mod error;
 pub mod manifest;
+pub mod profile;
+pub mod project;
 pub mod version;

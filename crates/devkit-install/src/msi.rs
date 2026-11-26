@@ -436,7 +436,7 @@ mod tests {
                 ),
                 ERROR_SUCCESS
             );
-            let mut record = MsiCreateRecord(2);
+            let record = MsiCreateRecord(2);
             assert_ne!(record, 0);
             assert_eq!(
                 MsiRecordSetStringW(record, 1, wide("ProductCode").as_ptr()),

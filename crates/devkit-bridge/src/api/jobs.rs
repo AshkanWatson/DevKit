@@ -127,6 +127,13 @@ pub fn start_install(package_id: String, version: String) -> Result<String, Brid
             "package id and version are required",
         ));
     }
+    enqueue_real_install(&package_id, &version)
+}
+
+/// Shared enqueue path for a single real install (`start_install` and
+/// profile apply, P4-03). Builds the production config and hands the job to
+/// the engine's manager; the job runs independently of any caller lifecycle.
+pub(crate) fn enqueue_real_install(package_id: &str, version: &str) -> Result<String, BridgeError> {
     let state = engine()?;
     let source = RegistrySource::new(open_db()?);
     let config = RealInstallConfig {
@@ -140,7 +147,7 @@ pub fn start_install(package_id: String, version: String) -> Result<String, Brid
     };
     state
         .manager
-        .enqueue_real_install(config, &package_id, &version)
+        .enqueue_real_install(config, package_id, version)
         .map_err(from_jobs_error)
 }
 

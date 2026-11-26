@@ -26,7 +26,7 @@ SCHEMAS_DIR = ROOT / "schemas"
 EXAMPLES_DIR = SCHEMAS_DIR / "examples"
 INVALID_DIR = EXAMPLES_DIR / "invalid"
 
-SCHEMA_KEYWORDS = ("package", "profile")
+SCHEMA_KEYWORDS = ("package", "profile", "project")
 
 failures: list[str] = []
 

@@ -77,6 +77,11 @@ final catalogProfilesProvider = FutureProvider<List<ProfileInfo>>(
   (ref) => ref.watch(catalogRepositoryProvider).profiles(),
 );
 
+/// User-created/user-edited personal profiles (P4-04).
+final personalProfilesProvider = FutureProvider<List<ProfileInfo>>(
+  (ref) => ref.watch(catalogRepositoryProvider).personalProfiles(),
+);
+
 /// Installed packages.
 final installedPackagesProvider = FutureProvider<List<InstalledPackage>>(
   (ref) => ref.watch(installedRepositoryProvider).installed(),

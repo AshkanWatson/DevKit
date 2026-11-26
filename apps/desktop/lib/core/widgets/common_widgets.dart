@@ -318,29 +318,49 @@ class ProgressStage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(stage.label, style: theme.textTheme.bodyMedium),
-            ),
-            // Percentage ONLY when progress is measurable.
-            if (progress != null)
-              Text(
-                '${(progress! * 100).round()}%',
-                style: theme.textTheme.bodySmall,
+    final label = progress == null
+        ? '${stage.label} (progress unavailable)'
+        : '${stage.label} (${(progress! * 100).round()} percent)';
+
+    // DESIGN.md §10: announce job stage changes to screen readers and expose
+    // a semantic label/value. State is never color-only — the stage label and
+    // (when measurable) percentage are always textual.
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      label: label,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: ExcludeSemantics(
+                  child: Text(stage.label, style: theme.textTheme.bodyMedium),
+                ),
               ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        LinearProgressIndicator(
-          value: progress,
-          minHeight: 4,
-          borderRadius: BorderRadius.circular(2),
-        ),
-      ],
+              // Percentage ONLY when progress is measurable.
+              if (progress != null)
+                ExcludeSemantics(
+                  child: Text(
+                    '${(progress! * 100).round()}%',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Semantics(
+            label: stage.label,
+            value: progress == null ? null : '${(progress! * 100).round()}%',
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 4,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

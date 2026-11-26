@@ -353,7 +353,7 @@ void main() {
       await goTo(tester, Icons.people_outline);
 
       expect(find.text('Flutter Developer'), findsOneWidget);
-      expect(find.text('Python Developer'), findsOneWidget);
+      expect(find.text('Python Developer', skipOffstage: false), findsOneWidget);
 
       final flutterCard = find
           .ancestor(
@@ -431,14 +431,101 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Apply profile — Flutter Developer'), findsOneWidget);
+      expect(find.textContaining('Will install:'), findsOneWidget);
       expect(find.textContaining('devkit.framework.flutter'), findsWidgets);
+      // Installing is real but does not activate or change PATH.
       expect(
-        find.textContaining('simulates profile application'),
-        findsWidgets,
+        find.textContaining('does not switch the active version'),
+        findsOneWidget,
       );
 
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
+    });
+
+    testWidgets('confirming apply enqueues jobs and shows progress', (
+      tester,
+    ) async {
+      final recording = _RecordingJobsRepository();
+      await tester.pumpWidget(
+        buildApp(
+          overrides: [jobsRepositoryProvider.overrideWithValue(recording)],
+        ),
+      );
+      await tester.pumpAndSettle();
+      await goTo(tester, Icons.people_outline);
+
+      final flutterCard = find
+          .ancestor(
+            of: find.text('Flutter Developer'),
+            matching: find.byType(Card),
+          )
+          .first;
+      final apply = find.descendant(
+        of: flutterCard,
+        matching: find.text('Apply'),
+      );
+      await tester.ensureVisible(apply);
+      await tester.tap(apply);
+      await tester.pumpAndSettle();
+
+      // Confirm the review dialog. The recording repo has no real timers.
+      await tester.tap(find.text('Apply').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Applying profile'), findsOneWidget);
+      expect(recording.started, isNotEmpty);
+      // Required packages are always applied regardless of selection.
+      expect(recording.started.any((s) => s.startsWith('apply|')), isTrue);
+
+      await tester.tap(find.text('Close'));
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('save as personal profile and delete it', (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+      await goTo(tester, Icons.people_outline);
+
+      final flutterCard = find
+          .ancestor(
+            of: find.text('Flutter Developer'),
+            matching: find.byType(Card),
+          )
+          .first;
+      final save = find.descendant(
+        of: flutterCard,
+        matching: find.text('Save as personal'),
+      );
+      await tester.ensureVisible(save);
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Save as personal profile'), findsOneWidget);
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      // The save invalidates the personal-profiles provider; give the
+      // re-fetch a frame to complete.
+      await tester.pump();
+      await tester.pumpAndSettle();
+      // Riverpod schedules the listener rebuild a frame after the future
+      // resolves; pump once more to flush it before asserting.
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      // The personal profile shows up under "My profiles".
+      expect(find.text('My profiles', skipOffstage: false), findsOneWidget);
+      expect(
+        find.text('Flutter Developer (personal)', skipOffstage: false),
+        findsOneWidget,
+      );
+
+      // The row exposes a delete affordance (deletion itself is covered by
+      // the repository test in ffi_repositories_test.dart).
+      expect(
+        find.byIcon(Icons.delete_outline, skipOffstage: false),
+        findsOneWidget,
+      );
     });
   });
 
@@ -896,6 +983,28 @@ class _DelayedCatalog implements CatalogRepository {
 
   @override
   Future<List<ProfileInfo>> profiles() async => const [];
+
+  @override
+  Future<ProfileResolution> resolveProfile(String profileId) async =>
+      _inner.resolveProfile(profileId);
+
+  @override
+  Future<List<ProfileInfo>> personalProfiles() async =>
+      _inner.personalProfiles();
+
+  @override
+  Future<ProfileInfo> savePersonalProfile(String manifestJson) async =>
+      _inner.savePersonalProfile(manifestJson);
+
+  @override
+  Future<bool> deletePersonalProfile(String id) async =>
+      _inner.deletePersonalProfile(id);
+
+  @override
+  Future<ProjectPlan> planProject(
+    String projectJson, {
+    String? profileId,
+  }) async => _inner.planProject(projectJson, profileId: profileId);
 }
 
 /// Catalog stub that always fails — drives the error-state UI.
@@ -910,6 +1019,30 @@ class _ExplodingCatalogRepository implements CatalogRepository {
 
   @override
   Future<List<ProfileInfo>> profiles() async => const [];
+
+  @override
+  Future<ProfileResolution> resolveProfile(String profileId) async {
+    throw StateError('catalog offline');
+  }
+
+  @override
+  Future<List<ProfileInfo>> personalProfiles() async => const [];
+
+  @override
+  Future<ProfileInfo> savePersonalProfile(String manifestJson) async {
+    throw StateError('catalog offline');
+  }
+
+  @override
+  Future<bool> deletePersonalProfile(String id) async => false;
+
+  @override
+  Future<ProjectPlan> planProject(
+    String projectJson, {
+    String? profileId,
+  }) async {
+    throw StateError('catalog offline');
+  }
 }
 
 /// Jobs stub that records starts without spawning timers — used so the
@@ -936,4 +1069,19 @@ class _RecordingJobsRepository implements JobsRepository {
 
   @override
   Future<void> cancelJob(String jobId) async {}
+
+  @override
+  Future<ProfileApplyResult> applyProfile(
+    String profileId,
+    List<String> selectedPackageIds,
+  ) async {
+    for (final id in selectedPackageIds) {
+      started.add('apply|$profileId|$id');
+    }
+    return ProfileApplyResult(
+      profileId: profileId,
+      jobs: const [],
+      skipped: const [],
+    );
+  }
 }

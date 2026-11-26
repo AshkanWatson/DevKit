@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "name": "My Python Service",
+  "description": "Project-level pins for a Python service. Entering this project suggests these versions; nothing is applied automatically.",
+  "packages": [
+    {
+      "package_id": "devkit.lang.python",
+      "required": true,
+      "version_policy": "exact",
+      "version": "3.12.7"
+    },
+    {
+      "package_id": "devkit.utility.git",
+      "required": false,
+      "version_policy": "stable"
+    },
+    {
+      "package_id": "devkit.ide.vscode",
+      "required": false,
+      "version_policy": "latest",
+      "channel": "stable"
+    }
+  ]
+}

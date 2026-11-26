@@ -507,13 +507,16 @@ mod tests {
             if file_name.contains("package") {
                 PackageManifest::from_json(&json)
                     .unwrap_or_else(|e| panic!("{file_name} must parse: {e}"));
+            } else if file_name.contains("project") {
+                crate::project::ProjectManifest::from_json(&json)
+                    .unwrap_or_else(|e| panic!("{file_name} must parse: {e}"));
             } else {
                 ProfileManifest::from_json(&json)
                     .unwrap_or_else(|e| panic!("{file_name} must parse: {e}"));
             }
             checked += 1;
         }
-        assert!(checked >= 4, "expected the four committed examples");
+        assert!(checked >= 5, "expected the committed examples");
     }
 
     #[test]
@@ -526,6 +529,10 @@ mod tests {
             let file_name = path.file_name().unwrap().to_string_lossy().to_string();
             let result = if file_name.contains("package") {
                 PackageManifest::from_json(&json).map(|_| ())
+            } else if file_name.contains("project") {
+                crate::project::ProjectManifest::from_json(&json)
+                    .map(|_| ())
+                    .map_err(|e| ManifestError::Schema(e.to_string()))
             } else {
                 ProfileManifest::from_json(&json).map(|_| ())
             };
@@ -537,7 +544,7 @@ mod tests {
             );
             checked += 1;
         }
-        assert!(checked >= 2, "expected the committed invalid fixtures");
+        assert!(checked >= 3, "expected the committed invalid fixtures");
     }
 
     fn valid_package_json() -> String {

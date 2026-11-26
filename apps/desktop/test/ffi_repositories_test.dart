@@ -385,5 +385,45 @@ void main() {
         expect(await repo.deletePersonalProfile(personal.id), isFalse);
       },
     );
+
+    test('project plan prefers the exact project pin', () async {
+      final repo = FixtureCatalogRepository();
+      final project = jsonEncode(<String, dynamic>{
+        'schema_version': 1,
+        'name': 'My Project',
+        'packages': <dynamic>[
+          <String, dynamic>{
+            'package_id': 'devkit.lang.python',
+            'required': true,
+            'version_policy': 'exact',
+            'version': '3.12.7',
+          },
+        ],
+      });
+      final plan = await repo.planProject(project);
+      expect(plan.projectName, 'My Project');
+      expect(plan.pins, hasLength(1));
+      expect(plan.pins.first.packageId, 'devkit.lang.python');
+      expect(plan.pins.first.version, '3.12.7');
+      expect(plan.pins.first.source, PinSource.project);
+    });
+
+    test('project plan reports an unresolved optional pin', () async {
+      final repo = FixtureCatalogRepository();
+      final project = jsonEncode(<String, dynamic>{
+        'schema_version': 1,
+        'name': 'My Project',
+        'packages': <dynamic>[
+          <String, dynamic>{
+            'package_id': 'devkit.unknown.package',
+            'required': false,
+            'version_policy': 'stable',
+          },
+        ],
+      });
+      final plan = await repo.planProject(project);
+      expect(plan.pins, isEmpty);
+      expect(plan.unresolved, contains('devkit.unknown.package'));
+    });
   });
 }

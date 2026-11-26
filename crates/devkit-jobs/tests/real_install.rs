@@ -510,10 +510,12 @@ fn non_supported_installer_kinds_are_rejected_before_any_network_work() {
     seed_catalog(&env);
     let port = spawn_serving(bytes.clone());
     let manager = env.manager();
-    // The `msi` adapter is P3-07 scope: resolution must refuse before any
-    // download happens, on every platform.
+    // dmg/pkg/appimage are later-phase kinds: resolution must refuse with
+    // INVALID_ARGUMENT before any download happens, on every platform.
+    // (msi is no longer in this group — P3-07 adds it as a Windows-only
+    // adapter, so off Windows it reports UNSUPPORTED_PLATFORM like exe.)
     let source = FixtureSource {
-        artifact: artifact_for(port, &bytes, InstallerKind::Msi),
+        artifact: artifact_for(port, &bytes, InstallerKind::Dmg),
         failure: None,
     };
     let job_id = manager

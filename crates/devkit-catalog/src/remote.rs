@@ -41,6 +41,15 @@ const PAGE_SIZE: usize = 100;
 /// Safety cap for `next`-link pagination loops.
 const MAX_PAGES: usize = 50;
 
+/// Whether a cached profile should be removed during catalog sync. Only
+/// catalog-origin profiles that vanished upstream are removed; personal
+/// (`origin = 'user'`) profiles are local, non-reconstructible data and must
+/// survive every sync (local-database.md §3.2). Pure so this contract is
+/// directly testable without a network or database.
+fn should_remove_on_sync(origin: &str, id: &str, present: &HashSet<&str>) -> bool {
+    origin == "catalog" && !present.contains(id)
+}
+
 /// Result of one conditional GET.
 #[derive(Debug, Clone)]
 pub enum CatalogFetch {
@@ -333,7 +342,10 @@ impl<C: CatalogHttp> RemoteCatalog<C> {
         let present: HashSet<&str> = ids.iter().map(String::as_str).collect();
         let cache = self.catalog.profile_cache();
         for cached in cache.list()? {
-            if !present.contains(cached.manifest.id.as_str()) {
+            // Never delete user-created/user-edited profiles: they are local,
+            // non-reconstructible data (local-database.md §3.2). Only catalog
+            // profiles that vanished upstream are removed.
+            if should_remove_on_sync(&cached.origin, &cached.manifest.id, &present) {
                 cache.remove(&cached.manifest.id)?;
             }
         }
@@ -441,5 +453,37 @@ impl<C: CatalogHttp> RemoteCatalog<C> {
 
     fn categories_url(&self) -> String {
         self.url("/catalog/categories")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn catalog_profiles_vanishing_upstream_are_removed() {
+        let present: HashSet<&str> = ["devkit.profile.still-there"].into_iter().collect();
+        assert!(should_remove_on_sync(
+            "catalog",
+            "devkit.profile.gone",
+            &present
+        ));
+        assert!(!should_remove_on_sync(
+            "catalog",
+            "devkit.profile.still-there",
+            &present
+        ));
+    }
+
+    #[test]
+    fn personal_profiles_survive_catalog_sync() {
+        let present: HashSet<&str> = HashSet::new();
+        // Even with no catalog profiles upstream, a user profile is never
+        // removed — it is local, non-reconstructible data.
+        assert!(!should_remove_on_sync(
+            "user",
+            "devkit.profile.personal",
+            &present
+        ));
     }
 }

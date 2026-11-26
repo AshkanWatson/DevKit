@@ -9,6 +9,7 @@ import 'api/engine.dart';
 import 'api/error.dart';
 import 'api/installed.dart';
 import 'api/jobs.dart';
+import 'api/profiles.dart';
 import 'api/simple.dart';
 
 import 'dart:async';
@@ -156,7 +157,23 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
+  List<ProfileApplyJobDto> dco_decode_list_profile_apply_job_dto(dynamic raw);
+
+  @protected
+  List<ProjectPinDto> dco_decode_list_project_pin_dto(dynamic raw);
+
+  @protected
+  List<ResolvedProfilePackageDto> dco_decode_list_resolved_profile_package_dto(
+    dynamic raw,
+  );
+
+  @protected
   List<ShimPlanDto> dco_decode_list_shim_plan_dto(dynamic raw);
+
+  @protected
+  List<SkippedProfilePackageDto> dco_decode_list_skipped_profile_package_dto(
+    dynamic raw,
+  );
 
   @protected
   String? dco_decode_opt_String(dynamic raw);
@@ -179,10 +196,36 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PathChangeKind dco_decode_path_change_kind(dynamic raw);
 
   @protected
+  ProfileApplyJobDto dco_decode_profile_apply_job_dto(dynamic raw);
+
+  @protected
+  ProfileApplyResultDto dco_decode_profile_apply_result_dto(dynamic raw);
+
+  @protected
+  ProfileResolutionDto dco_decode_profile_resolution_dto(dynamic raw);
+
+  @protected
+  ProfileSkipReasonDto dco_decode_profile_skip_reason_dto(dynamic raw);
+
+  @protected
+  ProjectPinDto dco_decode_project_pin_dto(dynamic raw);
+
+  @protected
+  ProjectPlanDto dco_decode_project_plan_dto(dynamic raw);
+
+  @protected
   RemovalResultDto dco_decode_removal_result_dto(dynamic raw);
 
   @protected
+  ResolvedProfilePackageDto dco_decode_resolved_profile_package_dto(
+    dynamic raw,
+  );
+
+  @protected
   ShimPlanDto dco_decode_shim_plan_dto(dynamic raw);
+
+  @protected
+  SkippedProfilePackageDto dco_decode_skipped_profile_package_dto(dynamic raw);
 
   @protected
   SyncCatalogStats dco_decode_sync_catalog_stats(dynamic raw);
@@ -365,7 +408,27 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
+  List<ProfileApplyJobDto> sse_decode_list_profile_apply_job_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<ProjectPinDto> sse_decode_list_project_pin_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<ResolvedProfilePackageDto> sse_decode_list_resolved_profile_package_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<ShimPlanDto> sse_decode_list_shim_plan_dto(SseDeserializer deserializer);
+
+  @protected
+  List<SkippedProfilePackageDto> sse_decode_list_skipped_profile_package_dto(
+    SseDeserializer deserializer,
+  );
 
   @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
@@ -388,10 +451,46 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PathChangeKind sse_decode_path_change_kind(SseDeserializer deserializer);
 
   @protected
+  ProfileApplyJobDto sse_decode_profile_apply_job_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ProfileApplyResultDto sse_decode_profile_apply_result_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ProfileResolutionDto sse_decode_profile_resolution_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ProfileSkipReasonDto sse_decode_profile_skip_reason_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ProjectPinDto sse_decode_project_pin_dto(SseDeserializer deserializer);
+
+  @protected
+  ProjectPlanDto sse_decode_project_plan_dto(SseDeserializer deserializer);
+
+  @protected
   RemovalResultDto sse_decode_removal_result_dto(SseDeserializer deserializer);
 
   @protected
+  ResolvedProfilePackageDto sse_decode_resolved_profile_package_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ShimPlanDto sse_decode_shim_plan_dto(SseDeserializer deserializer);
+
+  @protected
+  SkippedProfilePackageDto sse_decode_skipped_profile_package_dto(
+    SseDeserializer deserializer,
+  );
 
   @protected
   SyncCatalogStats sse_decode_sync_catalog_stats(SseDeserializer deserializer);
@@ -613,8 +712,32 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_profile_apply_job_dto(
+    List<ProfileApplyJobDto> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_project_pin_dto(
+    List<ProjectPinDto> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_resolved_profile_package_dto(
+    List<ResolvedProfilePackageDto> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_shim_plan_dto(
     List<ShimPlanDto> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_skipped_profile_package_dto(
+    List<SkippedProfilePackageDto> self,
     SseSerializer serializer,
   );
 
@@ -646,13 +769,58 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_profile_apply_job_dto(
+    ProfileApplyJobDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_profile_apply_result_dto(
+    ProfileApplyResultDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_profile_resolution_dto(
+    ProfileResolutionDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_profile_skip_reason_dto(
+    ProfileSkipReasonDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_project_pin_dto(ProjectPinDto self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_project_plan_dto(
+    ProjectPlanDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_removal_result_dto(
     RemovalResultDto self,
     SseSerializer serializer,
   );
 
   @protected
+  void sse_encode_resolved_profile_package_dto(
+    ResolvedProfilePackageDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_shim_plan_dto(ShimPlanDto self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_skipped_profile_package_dto(
+    SkippedProfilePackageDto self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_sync_catalog_stats(

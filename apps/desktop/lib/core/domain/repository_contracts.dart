@@ -20,6 +20,26 @@ abstract interface class CatalogRepository {
 
   /// All catalog profiles.
   Future<List<ProfileInfo>> profiles();
+
+  /// Resolve a profile into a concrete, reviewable install plan against the
+  /// local catalog cache (P4-02). Pure read — nothing is installed.
+  Future<ProfileResolution> resolveProfile(String profileId);
+
+  /// User-created/user-edited personal profiles (`origin = 'user'`),
+  /// ordered by ID (P4-04). Catalog profiles are not editable here.
+  Future<List<ProfileInfo>> personalProfiles();
+
+  /// Save a personal profile from a profile manifest JSON document. Rust
+  /// validates the manifest and refuses to overwrite a catalog profile.
+  Future<ProfileInfo> savePersonalProfile(String manifestJson);
+
+  /// Delete a personal profile. Returns true when a user profile was removed.
+  Future<bool> deletePersonalProfile(String id);
+
+  /// Plan a project's version pins (P4-05): a pure read that suggests changes
+  /// but never applies them. `profileId` optionally supplies a selected
+  /// profile whose policy is used when a project pin cannot resolve.
+  Future<ProjectPlan> planProject(String projectJson, {String? profileId});
 }
 
 /// The installed registry (future FFI: `list_installed_packages`,
@@ -58,4 +78,12 @@ abstract interface class JobsRepository {
   /// Request cooperative cancellation. The job stops at the next safe
   /// boundary; this returns immediately.
   Future<void> cancelJob(String jobId);
+
+  /// Applies a reviewed profile: enqueues one real install job per selected
+  /// package and returns the job list to watch plus everything skipped
+  /// (P4-03). Installing does not activate or change PATH.
+  Future<ProfileApplyResult> applyProfile(
+    String profileId,
+    List<String> selectedPackageIds,
+  );
 }

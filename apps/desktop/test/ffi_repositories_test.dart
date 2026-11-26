@@ -5,6 +5,8 @@
 /// provider defaults fall back to the fakes when FLUTTER_TEST is set.
 library;
 
+import 'dart:convert';
+
 import 'package:devkit/core/bridge/api/catalog.dart' as bridge_catalog;
 import 'package:devkit/core/bridge/api/installed.dart' as bridge_installed;
 import 'package:devkit/core/bridge/api/jobs.dart' as bridge_jobs;
@@ -307,5 +309,81 @@ void main() {
       expect(FfiInstalledRepository(), isA<InstalledRepository>());
       expect(FfiJobsRepository(), isA<JobsRepository>());
     });
+  });
+
+  group('profile resolution (P4-02 reviewable plan)', () {
+    test('fake resolves a seeded profile into concrete versions', () async {
+      final repo = FixtureCatalogRepository();
+      final plan = await repo.resolveProfile('devkit.profile.python-developer');
+      expect(plan.profileId, 'devkit.profile.python-developer');
+      // Python is pinned exact to 3.12.7 in the fixture.
+      final python = plan.packages.firstWhere(
+        (p) => p.packageId == 'devkit.lang.python',
+      );
+      expect(python.version, '3.12.7');
+      expect(python.policy, 'exact');
+      expect(python.required, isTrue);
+    });
+
+    test('ProfileSkipReason maps wire forms to domain values', () {
+      expect(
+        ProfileSkipReason.fromWire('packageUnavailable'),
+        ProfileSkipReason.packageUnavailable,
+      );
+      expect(
+        ProfileSkipReason.fromWire('noMatchingVersion'),
+        ProfileSkipReason.noMatchingVersion,
+      );
+      expect(
+        ProfileSkipReason.fromWire('deselected'),
+        ProfileSkipReason.deselected,
+      );
+    });
+
+    test(
+      'personal profiles save/delete and never shadow a catalog profile',
+      () async {
+        final repo = FixtureCatalogRepository();
+        expect(await repo.personalProfiles(), isEmpty);
+
+        final personal = ProfileInfo(
+          id: 'devkit.profile.personal.test',
+          name: 'Mine',
+          description: 'my profile',
+          maintainer: 'user',
+          platforms: const [],
+          packages: const [],
+        );
+        final saved = await repo.savePersonalProfile(
+          jsonEncode(<String, dynamic>{
+            'schema_version': 1,
+            'id': personal.id,
+            'name': personal.name,
+            'description': personal.description,
+            'packages': const [],
+          }),
+        );
+        expect(saved.id, personal.id);
+        expect(await repo.personalProfiles(), hasLength(1));
+
+        // A catalog profile id cannot be overwritten as personal.
+        expect(
+          () => repo.savePersonalProfile(
+            jsonEncode(<String, dynamic>{
+              'schema_version': 1,
+              'id': 'devkit.profile.flutter-developer',
+              'name': 'Hijack',
+              'description': '',
+              'packages': const [],
+            }),
+          ),
+          throwsStateError,
+        );
+
+        expect(await repo.deletePersonalProfile(personal.id), isTrue);
+        expect(await repo.personalProfiles(), isEmpty);
+        expect(await repo.deletePersonalProfile(personal.id), isFalse);
+      },
+    );
   });
 }

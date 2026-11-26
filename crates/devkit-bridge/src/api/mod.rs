@@ -8,7 +8,8 @@
 //! - `engine` — `init_engine` + storage-path facts (P3-05).
 //! - `catalog` — cached catalog reads + HTTPS sync (P3-05).
 //! - `jobs` — real install jobs, event streams, cancellation (P3-05).
-//! - `installed` — registry, activation consent pair, uninstall (P3-05).
+//! - `installed` - registry, activation consent pair, uninstall (P3-05).
+//! - `profiles` - reviewable profile resolution from the catalog cache (P4-02).
 
 use std::env::consts::{ARCH, OS};
 
@@ -17,6 +18,7 @@ pub mod engine;
 pub mod error;
 pub mod installed;
 pub mod jobs;
+pub mod profiles;
 pub mod simple;
 
 /// Identity of the running engine, for About / diagnostics.

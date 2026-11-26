@@ -8,8 +8,8 @@ import 'error.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `event_dto`, `job_context`, `job_dto`, `snapshot_all`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `clone`, `clone`, `eq`, `fmt`, `fmt`, `fmt`
+// These functions are ignored because they are not marked as `pub`: `enqueue_real_install`, `event_dto`, `job_context`, `job_dto`, `snapshot_all`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `eq`, `fmt`, `fmt`, `fmt`
 
 /// Starts a real install: the pipeline resolves the artifact from the
 /// catalog cache, downloads it (HTTPS-only, redirect policy), verifies

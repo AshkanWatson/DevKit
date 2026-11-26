@@ -24,6 +24,7 @@ import '../bridge/api/catalog.dart' as bridge_catalog;
 import '../bridge/api/engine.dart' as bridge_engine;
 import '../bridge/api/installed.dart' as bridge_installed;
 import '../bridge/api/jobs.dart' as bridge_jobs;
+import '../bridge/api/profiles.dart' as bridge_profiles;
 import '../bridge/bridge_providers.dart' show ensureBridgeInitialized;
 import '../domain/domain_models.dart';
 import '../domain/repository_contracts.dart';
@@ -148,6 +149,79 @@ class FfiCatalogRepository implements CatalogRepository {
     await _ensureEngine();
     final dtos = await bridge_catalog.listCatalogProfiles();
     return [for (final dto in dtos) profileInfoFromDto(dto)];
+  }
+
+  @override
+  Future<ProfileResolution> resolveProfile(String profileId) async {
+    await _ensureEngine();
+    final dto = await bridge_profiles.resolveProfile(profileId: profileId);
+    return ProfileResolution(
+      profileId: dto.profileId,
+      packages: [
+        for (final p in dto.packages)
+          ResolvedProfilePackage(
+            packageId: p.packageId,
+            required: p.required_,
+            policy: p.policy,
+            version: p.version,
+          ),
+      ],
+      skipped: [
+        for (final s in dto.skipped)
+          SkippedProfilePackage(
+            packageId: s.packageId,
+            reason: ProfileSkipReason.fromWire(s.reason.name),
+          ),
+      ],
+    );
+  }
+
+  @override
+  Future<List<ProfileInfo>> personalProfiles() async {
+    await _ensureEngine();
+    final dtos = await bridge_profiles.listPersonalProfiles();
+    return [for (final dto in dtos) profileInfoFromDto(dto)];
+  }
+
+  @override
+  Future<ProfileInfo> savePersonalProfile(String manifestJson) async {
+    await _ensureEngine();
+    final dto = await bridge_profiles.savePersonalProfile(
+      manifestJson: manifestJson,
+    );
+    return profileInfoFromDto(dto);
+  }
+
+  @override
+  Future<bool> deletePersonalProfile(String id) async {
+    await _ensureEngine();
+    return bridge_profiles.deletePersonalProfile(id: id);
+  }
+
+  @override
+  Future<ProjectPlan> planProject(
+    String projectJson, {
+    String? profileId,
+  }) async {
+    await _ensureEngine();
+    final dto = await bridge_profiles.planProject(
+      projectJson: projectJson,
+      profileId: profileId,
+    );
+    return ProjectPlan(
+      projectName: dto.projectName,
+      pins: [
+        for (final pin in dto.pins)
+          ProjectPin(
+            packageId: pin.packageId,
+            version: pin.version,
+            source: PinSource.fromWire(pin.source),
+            currentActive: pin.currentActive,
+            changeNeeded: pin.changeNeeded,
+          ),
+      ],
+      unresolved: List<String>.from(dto.unresolved),
+    );
   }
 }
 
@@ -324,5 +398,35 @@ class FfiJobsRepository implements JobsRepository {
     // the UI (terminal states reject cancellation; the control is
     // disabled for them) — the contract method returns void.
     await bridge_jobs.cancelJob(jobId: jobId);
+  }
+
+  @override
+  Future<ProfileApplyResult> applyProfile(
+    String profileId,
+    List<String> selectedPackageIds,
+  ) async {
+    await _ensureEngine();
+    final dto = await bridge_profiles.applyProfile(
+      profileId: profileId,
+      selectedPackageIds: selectedPackageIds,
+    );
+    return ProfileApplyResult(
+      profileId: dto.profileId,
+      jobs: [
+        for (final job in dto.jobs)
+          ProfileApplyJob(
+            packageId: job.packageId,
+            version: job.version,
+            jobId: job.jobId,
+          ),
+      ],
+      skipped: [
+        for (final skip in dto.skipped)
+          SkippedProfilePackage(
+            packageId: skip.packageId,
+            reason: ProfileSkipReason.fromWire(skip.reason.name),
+          ),
+      ],
+    );
   }
 }

@@ -8,7 +8,7 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `bridge_error`, `diagnostic_id`, `from_engine_code`, `from_jobs_error`, `from_registry_error`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `clone`, `eq`, `fmt`, `fmt`, `fmt`, `hash`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `eq`, `fmt`, `fmt`, `fmt`, `hash`
 // These functions are ignored (category: IgnoreBecauseExplicitAttribute): `as_str`, `code_str`, `code`
 
 /// Structured bridge error carrying the stable code.

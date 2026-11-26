@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -986572370;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -986315241;
 
 // Section: executor
 
@@ -47,6 +47,43 @@ flutter_rust_bridge::frb_generated_default_handler!();
 
 // Section: wire_funcs
 
+fn wire__crate__api__profiles__apply_profile_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "apply_profile",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_profile_id = <String>::sse_decode(&mut deserializer);
+            let api_selected_package_ids = <Vec<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::error::BridgeError>((move || {
+                    let output_ok = crate::api::profiles::apply_profile(
+                        api_profile_id,
+                        api_selected_package_ids,
+                    )?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__jobs__cancel_job_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -74,6 +111,39 @@ fn wire__crate__api__jobs__cancel_job_impl(
             move |context| {
                 transform_result_sse::<_, crate::api::error::BridgeError>((move || {
                     let output_ok = crate::api::jobs::cancel_job(api_job_id)?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__profiles__delete_personal_profile_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "delete_personal_profile",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::error::BridgeError>((move || {
+                    let output_ok = crate::api::profiles::delete_personal_profile(api_id)?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -504,6 +574,38 @@ fn wire__crate__api__jobs__list_jobs_impl(
         },
     )
 }
+fn wire__crate__api__profiles__list_personal_profiles_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "list_personal_profiles",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::error::BridgeError>((move || {
+                    let output_ok = crate::api::profiles::list_personal_profiles()?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__installed__plan_activation_for_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -539,6 +641,41 @@ fn wire__crate__api__installed__plan_activation_for_impl(
         },
     )
 }
+fn wire__crate__api__profiles__plan_project_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "plan_project",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_project_json = <String>::sse_decode(&mut deserializer);
+            let api_profile_id = <Option<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::error::BridgeError>((move || {
+                    let output_ok =
+                        crate::api::profiles::plan_project(api_project_json, api_profile_id)?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__installed__remove_managed_version_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -568,6 +705,72 @@ fn wire__crate__api__installed__remove_managed_version_impl(
                 transform_result_sse::<_, crate::api::error::BridgeError>((move || {
                     let output_ok =
                         crate::api::installed::remove_managed_version(api_package_id, api_version)?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__profiles__resolve_profile_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "resolve_profile",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_profile_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::error::BridgeError>((move || {
+                    let output_ok = crate::api::profiles::resolve_profile(api_profile_id)?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__profiles__save_personal_profile_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "save_personal_profile",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_manifest_json = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::api::error::BridgeError>((move || {
+                    let output_ok = crate::api::profiles::save_personal_profile(api_manifest_json)?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -1367,6 +1570,46 @@ impl SseDecode for Vec<u8> {
     }
 }
 
+impl SseDecode for Vec<crate::api::profiles::ProfileApplyJobDto> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::profiles::ProfileApplyJobDto>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::profiles::ProjectPinDto> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::profiles::ProjectPinDto>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::profiles::ResolvedProfilePackageDto> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::profiles::ResolvedProfilePackageDto>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::api::installed::ShimPlanDto> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1376,6 +1619,18 @@ impl SseDecode for Vec<crate::api::installed::ShimPlanDto> {
             ans_.push(<crate::api::installed::ShimPlanDto>::sse_decode(
                 deserializer,
             ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::profiles::SkippedProfilePackageDto> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::profiles::SkippedProfilePackageDto>::sse_decode(deserializer));
         }
         return ans_;
     }
@@ -1454,6 +1709,97 @@ impl SseDecode for crate::api::installed::PathChangeKind {
     }
 }
 
+impl SseDecode for crate::api::profiles::ProfileApplyJobDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_packageId = <String>::sse_decode(deserializer);
+        let mut var_version = <String>::sse_decode(deserializer);
+        let mut var_jobId = <String>::sse_decode(deserializer);
+        return crate::api::profiles::ProfileApplyJobDto {
+            package_id: var_packageId,
+            version: var_version,
+            job_id: var_jobId,
+        };
+    }
+}
+
+impl SseDecode for crate::api::profiles::ProfileApplyResultDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_profileId = <String>::sse_decode(deserializer);
+        let mut var_jobs =
+            <Vec<crate::api::profiles::ProfileApplyJobDto>>::sse_decode(deserializer);
+        let mut var_skipped =
+            <Vec<crate::api::profiles::SkippedProfilePackageDto>>::sse_decode(deserializer);
+        return crate::api::profiles::ProfileApplyResultDto {
+            profile_id: var_profileId,
+            jobs: var_jobs,
+            skipped: var_skipped,
+        };
+    }
+}
+
+impl SseDecode for crate::api::profiles::ProfileResolutionDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_profileId = <String>::sse_decode(deserializer);
+        let mut var_packages =
+            <Vec<crate::api::profiles::ResolvedProfilePackageDto>>::sse_decode(deserializer);
+        let mut var_skipped =
+            <Vec<crate::api::profiles::SkippedProfilePackageDto>>::sse_decode(deserializer);
+        return crate::api::profiles::ProfileResolutionDto {
+            profile_id: var_profileId,
+            packages: var_packages,
+            skipped: var_skipped,
+        };
+    }
+}
+
+impl SseDecode for crate::api::profiles::ProfileSkipReasonDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::profiles::ProfileSkipReasonDto::PackageUnavailable,
+            1 => crate::api::profiles::ProfileSkipReasonDto::NoMatchingVersion,
+            2 => crate::api::profiles::ProfileSkipReasonDto::Deselected,
+            _ => unreachable!("Invalid variant for ProfileSkipReasonDto: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::profiles::ProjectPinDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_packageId = <String>::sse_decode(deserializer);
+        let mut var_version = <String>::sse_decode(deserializer);
+        let mut var_source = <String>::sse_decode(deserializer);
+        let mut var_currentActive = <Option<String>>::sse_decode(deserializer);
+        let mut var_changeNeeded = <bool>::sse_decode(deserializer);
+        return crate::api::profiles::ProjectPinDto {
+            package_id: var_packageId,
+            version: var_version,
+            source: var_source,
+            current_active: var_currentActive,
+            change_needed: var_changeNeeded,
+        };
+    }
+}
+
+impl SseDecode for crate::api::profiles::ProjectPlanDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_projectName = <String>::sse_decode(deserializer);
+        let mut var_pins = <Vec<crate::api::profiles::ProjectPinDto>>::sse_decode(deserializer);
+        let mut var_unresolved = <Vec<String>>::sse_decode(deserializer);
+        return crate::api::profiles::ProjectPlanDto {
+            project_name: var_projectName,
+            pins: var_pins,
+            unresolved: var_unresolved,
+        };
+    }
+}
+
 impl SseDecode for crate::api::installed::RemovalResultDto {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1468,6 +1814,22 @@ impl SseDecode for crate::api::installed::RemovalResultDto {
     }
 }
 
+impl SseDecode for crate::api::profiles::ResolvedProfilePackageDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_packageId = <String>::sse_decode(deserializer);
+        let mut var_required_ = <bool>::sse_decode(deserializer);
+        let mut var_policy = <String>::sse_decode(deserializer);
+        let mut var_version = <String>::sse_decode(deserializer);
+        return crate::api::profiles::ResolvedProfilePackageDto {
+            package_id: var_packageId,
+            required: var_required_,
+            policy: var_policy,
+            version: var_version,
+        };
+    }
+}
+
 impl SseDecode for crate::api::installed::ShimPlanDto {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1476,6 +1838,18 @@ impl SseDecode for crate::api::installed::ShimPlanDto {
         return crate::api::installed::ShimPlanDto {
             shim_relative_path: var_shimRelativePath,
             target_relative_path: var_targetRelativePath,
+        };
+    }
+}
+
+impl SseDecode for crate::api::profiles::SkippedProfilePackageDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_packageId = <String>::sse_decode(deserializer);
+        let mut var_reason = <crate::api::profiles::ProfileSkipReasonDto>::sse_decode(deserializer);
+        return crate::api::profiles::SkippedProfilePackageDto {
+            package_id: var_packageId,
+            reason: var_reason,
         };
     }
 }
@@ -1547,48 +1921,69 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        1 => wire__crate__api__jobs__cancel_job_impl(port, ptr, rust_vec_len, data_len),
-        2 => wire__crate__api__get_app_info_impl(port, ptr, rust_vec_len, data_len),
-        3 => wire__crate__api__engine__get_engine_paths_impl(port, ptr, rust_vec_len, data_len),
-        4 => wire__crate__api__jobs__get_job_impl(port, ptr, rust_vec_len, data_len),
-        5 => wire__crate__api__jobs__get_job_events_impl(port, ptr, rust_vec_len, data_len),
-        6 => wire__crate__api__catalog__get_package_details_impl(port, ptr, rust_vec_len, data_len),
-        7 => wire__crate__api__get_system_info_impl(port, ptr, rust_vec_len, data_len),
-        9 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
-        10 => wire__crate__api__engine__init_engine_impl(port, ptr, rust_vec_len, data_len),
-        11 => {
+        1 => wire__crate__api__profiles__apply_profile_impl(port, ptr, rust_vec_len, data_len),
+        2 => wire__crate__api__jobs__cancel_job_impl(port, ptr, rust_vec_len, data_len),
+        3 => wire__crate__api__profiles__delete_personal_profile_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        4 => wire__crate__api__get_app_info_impl(port, ptr, rust_vec_len, data_len),
+        5 => wire__crate__api__engine__get_engine_paths_impl(port, ptr, rust_vec_len, data_len),
+        6 => wire__crate__api__jobs__get_job_impl(port, ptr, rust_vec_len, data_len),
+        7 => wire__crate__api__jobs__get_job_events_impl(port, ptr, rust_vec_len, data_len),
+        8 => wire__crate__api__catalog__get_package_details_impl(port, ptr, rust_vec_len, data_len),
+        9 => wire__crate__api__get_system_info_impl(port, ptr, rust_vec_len, data_len),
+        11 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
+        12 => wire__crate__api__engine__init_engine_impl(port, ptr, rust_vec_len, data_len),
+        13 => {
             wire__crate__api__catalog__list_catalog_profiles_impl(port, ptr, rust_vec_len, data_len)
         }
-        12 => wire__crate__api__installed__list_installed_packages_impl(
+        14 => wire__crate__api__installed__list_installed_packages_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        13 => wire__crate__api__installed__list_installed_versions_impl(
+        15 => wire__crate__api__installed__list_installed_versions_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        14 => wire__crate__api__jobs__list_jobs_impl(port, ptr, rust_vec_len, data_len),
-        15 => {
+        16 => wire__crate__api__jobs__list_jobs_impl(port, ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__profiles__list_personal_profiles_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        18 => {
             wire__crate__api__installed__plan_activation_for_impl(port, ptr, rust_vec_len, data_len)
         }
-        16 => wire__crate__api__installed__remove_managed_version_impl(
+        19 => wire__crate__api__profiles__plan_project_impl(port, ptr, rust_vec_len, data_len),
+        20 => wire__crate__api__installed__remove_managed_version_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        17 => wire__crate__api__catalog__search_catalog_impl(port, ptr, rust_vec_len, data_len),
-        18 => {
+        21 => wire__crate__api__profiles__resolve_profile_impl(port, ptr, rust_vec_len, data_len),
+        22 => wire__crate__api__profiles__save_personal_profile_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        23 => wire__crate__api__catalog__search_catalog_impl(port, ptr, rust_vec_len, data_len),
+        24 => {
             wire__crate__api__installed__set_active_version_impl(port, ptr, rust_vec_len, data_len)
         }
-        19 => wire__crate__api__jobs__start_install_impl(port, ptr, rust_vec_len, data_len),
-        20 => wire__crate__api__catalog__sync_catalog_impl(port, ptr, rust_vec_len, data_len),
-        21 => wire__crate__api__jobs__watch_job_events_impl(port, ptr, rust_vec_len, data_len),
-        22 => wire__crate__api__jobs__watch_jobs_impl(port, ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__jobs__start_install_impl(port, ptr, rust_vec_len, data_len),
+        26 => wire__crate__api__catalog__sync_catalog_impl(port, ptr, rust_vec_len, data_len),
+        27 => wire__crate__api__jobs__watch_job_events_impl(port, ptr, rust_vec_len, data_len),
+        28 => wire__crate__api__jobs__watch_jobs_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1601,7 +1996,7 @@ fn pde_ffi_dispatcher_sync_impl(
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        8 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
+        10 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -2072,6 +2467,140 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::installed::PathChangeKind>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::profiles::ProfileApplyJobDto {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.package_id.into_into_dart().into_dart(),
+            self.version.into_into_dart().into_dart(),
+            self.job_id.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::profiles::ProfileApplyJobDto
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::profiles::ProfileApplyJobDto>
+    for crate::api::profiles::ProfileApplyJobDto
+{
+    fn into_into_dart(self) -> crate::api::profiles::ProfileApplyJobDto {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::profiles::ProfileApplyResultDto {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.profile_id.into_into_dart().into_dart(),
+            self.jobs.into_into_dart().into_dart(),
+            self.skipped.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::profiles::ProfileApplyResultDto
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::profiles::ProfileApplyResultDto>
+    for crate::api::profiles::ProfileApplyResultDto
+{
+    fn into_into_dart(self) -> crate::api::profiles::ProfileApplyResultDto {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::profiles::ProfileResolutionDto {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.profile_id.into_into_dart().into_dart(),
+            self.packages.into_into_dart().into_dart(),
+            self.skipped.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::profiles::ProfileResolutionDto
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::profiles::ProfileResolutionDto>
+    for crate::api::profiles::ProfileResolutionDto
+{
+    fn into_into_dart(self) -> crate::api::profiles::ProfileResolutionDto {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::profiles::ProfileSkipReasonDto {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::PackageUnavailable => 0.into_dart(),
+            Self::NoMatchingVersion => 1.into_dart(),
+            Self::Deselected => 2.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::profiles::ProfileSkipReasonDto
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::profiles::ProfileSkipReasonDto>
+    for crate::api::profiles::ProfileSkipReasonDto
+{
+    fn into_into_dart(self) -> crate::api::profiles::ProfileSkipReasonDto {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::profiles::ProjectPinDto {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.package_id.into_into_dart().into_dart(),
+            self.version.into_into_dart().into_dart(),
+            self.source.into_into_dart().into_dart(),
+            self.current_active.into_into_dart().into_dart(),
+            self.change_needed.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::profiles::ProjectPinDto
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::profiles::ProjectPinDto>
+    for crate::api::profiles::ProjectPinDto
+{
+    fn into_into_dart(self) -> crate::api::profiles::ProjectPinDto {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::profiles::ProjectPlanDto {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.project_name.into_into_dart().into_dart(),
+            self.pins.into_into_dart().into_dart(),
+            self.unresolved.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::profiles::ProjectPlanDto
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::profiles::ProjectPlanDto>
+    for crate::api::profiles::ProjectPlanDto
+{
+    fn into_into_dart(self) -> crate::api::profiles::ProjectPlanDto {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::installed::RemovalResultDto {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -2094,6 +2623,29 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::installed::RemovalResultDto>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::profiles::ResolvedProfilePackageDto {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.package_id.into_into_dart().into_dart(),
+            self.required.into_into_dart().into_dart(),
+            self.policy.into_into_dart().into_dart(),
+            self.version.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::profiles::ResolvedProfilePackageDto
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::profiles::ResolvedProfilePackageDto>
+    for crate::api::profiles::ResolvedProfilePackageDto
+{
+    fn into_into_dart(self) -> crate::api::profiles::ResolvedProfilePackageDto {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::installed::ShimPlanDto {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -2111,6 +2663,27 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::installed::ShimPlanDto>
     for crate::api::installed::ShimPlanDto
 {
     fn into_into_dart(self) -> crate::api::installed::ShimPlanDto {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::profiles::SkippedProfilePackageDto {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.package_id.into_into_dart().into_dart(),
+            self.reason.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::profiles::SkippedProfilePackageDto
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::profiles::SkippedProfilePackageDto>
+    for crate::api::profiles::SkippedProfilePackageDto
+{
+    fn into_into_dart(self) -> crate::api::profiles::SkippedProfilePackageDto {
         self
     }
 }
@@ -2563,12 +3136,52 @@ impl SseEncode for Vec<u8> {
     }
 }
 
+impl SseEncode for Vec<crate::api::profiles::ProfileApplyJobDto> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::profiles::ProfileApplyJobDto>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::profiles::ProjectPinDto> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::profiles::ProjectPinDto>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::profiles::ResolvedProfilePackageDto> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::profiles::ResolvedProfilePackageDto>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::api::installed::ShimPlanDto> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::installed::ShimPlanDto>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::profiles::SkippedProfilePackageDto> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::profiles::SkippedProfilePackageDto>::sse_encode(item, serializer);
         }
     }
 }
@@ -2639,6 +3252,73 @@ impl SseEncode for crate::api::installed::PathChangeKind {
     }
 }
 
+impl SseEncode for crate::api::profiles::ProfileApplyJobDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.package_id, serializer);
+        <String>::sse_encode(self.version, serializer);
+        <String>::sse_encode(self.job_id, serializer);
+    }
+}
+
+impl SseEncode for crate::api::profiles::ProfileApplyResultDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.profile_id, serializer);
+        <Vec<crate::api::profiles::ProfileApplyJobDto>>::sse_encode(self.jobs, serializer);
+        <Vec<crate::api::profiles::SkippedProfilePackageDto>>::sse_encode(self.skipped, serializer);
+    }
+}
+
+impl SseEncode for crate::api::profiles::ProfileResolutionDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.profile_id, serializer);
+        <Vec<crate::api::profiles::ResolvedProfilePackageDto>>::sse_encode(
+            self.packages,
+            serializer,
+        );
+        <Vec<crate::api::profiles::SkippedProfilePackageDto>>::sse_encode(self.skipped, serializer);
+    }
+}
+
+impl SseEncode for crate::api::profiles::ProfileSkipReasonDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::profiles::ProfileSkipReasonDto::PackageUnavailable => 0,
+                crate::api::profiles::ProfileSkipReasonDto::NoMatchingVersion => 1,
+                crate::api::profiles::ProfileSkipReasonDto::Deselected => 2,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::profiles::ProjectPinDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.package_id, serializer);
+        <String>::sse_encode(self.version, serializer);
+        <String>::sse_encode(self.source, serializer);
+        <Option<String>>::sse_encode(self.current_active, serializer);
+        <bool>::sse_encode(self.change_needed, serializer);
+    }
+}
+
+impl SseEncode for crate::api::profiles::ProjectPlanDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.project_name, serializer);
+        <Vec<crate::api::profiles::ProjectPinDto>>::sse_encode(self.pins, serializer);
+        <Vec<String>>::sse_encode(self.unresolved, serializer);
+    }
+}
+
 impl SseEncode for crate::api::installed::RemovalResultDto {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -2648,11 +3328,29 @@ impl SseEncode for crate::api::installed::RemovalResultDto {
     }
 }
 
+impl SseEncode for crate::api::profiles::ResolvedProfilePackageDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.package_id, serializer);
+        <bool>::sse_encode(self.required, serializer);
+        <String>::sse_encode(self.policy, serializer);
+        <String>::sse_encode(self.version, serializer);
+    }
+}
+
 impl SseEncode for crate::api::installed::ShimPlanDto {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.shim_relative_path, serializer);
         <String>::sse_encode(self.target_relative_path, serializer);
+    }
+}
+
+impl SseEncode for crate::api::profiles::SkippedProfilePackageDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.package_id, serializer);
+        <crate::api::profiles::ProfileSkipReasonDto>::sse_encode(self.reason, serializer);
     }
 }
 

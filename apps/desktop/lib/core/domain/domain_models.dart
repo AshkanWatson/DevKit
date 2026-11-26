@@ -279,6 +279,156 @@ class ProfileInfo {
   final List<ProfilePackageRef> packages;
 }
 
+/// Why an optional package was skipped during profile resolution.
+enum ProfileSkipReason {
+  packageUnavailable,
+  noMatchingVersion,
+  deselected;
+
+  static ProfileSkipReason fromWire(String wire) => switch (wire) {
+    'packageUnavailable' => ProfileSkipReason.packageUnavailable,
+    'noMatchingVersion' => ProfileSkipReason.noMatchingVersion,
+    'deselected' => ProfileSkipReason.deselected,
+    _ => ProfileSkipReason.packageUnavailable,
+  };
+}
+
+/// One resolved package in a reviewable profile install plan.
+class ResolvedProfilePackage {
+  const ResolvedProfilePackage({
+    required this.packageId,
+    required this.required,
+    required this.policy,
+    required this.version,
+  });
+
+  final String packageId;
+  final bool required;
+
+  /// Applied policy wire label: exact / stable / latest / channel.
+  final String policy;
+  final String version;
+}
+
+/// An optional package that could not be resolved (informational).
+class SkippedProfilePackage {
+  const SkippedProfilePackage({required this.packageId, required this.reason});
+
+  final String packageId;
+  final ProfileSkipReason reason;
+}
+
+/// A reviewable plan produced by resolving a profile against the catalog
+/// cache (P4-02). Nothing is installed until the user reviews and applies it.
+class ProfileResolution {
+  const ProfileResolution({
+    required this.profileId,
+    required this.packages,
+    required this.skipped,
+  });
+
+  final String profileId;
+  final List<ResolvedProfilePackage> packages;
+  final List<SkippedProfilePackage> skipped;
+}
+
+/// One install job enqueued while applying a profile (P4-03). Its ID is
+/// watched in the job stream for per-package progress.
+class ProfileApplyJob {
+  const ProfileApplyJob({
+    required this.packageId,
+    required this.version,
+    required this.jobId,
+  });
+
+  final String packageId;
+  final String version;
+  final String jobId;
+}
+
+/// The result of applying a profile: jobs to track + everything skipped.
+class ProfileApplyResult {
+  const ProfileApplyResult({
+    required this.profileId,
+    required this.jobs,
+    required this.skipped,
+  });
+
+  final String profileId;
+  final List<ProfileApplyJob> jobs;
+  final List<SkippedProfilePackage> skipped;
+
+  /// True once every tracked job has finished (terminal stage).
+  bool allJobsTerminal(List<JobInfo> jobs) {
+    if (this.jobs.isEmpty) return true;
+    final byId = {for (final job in jobs) job.id: job};
+    return this.jobs.every((a) => byId[a.jobId]?.stage.isTerminal ?? false);
+  }
+
+  /// Count of enqueued jobs currently in a terminal success stage.
+  int completedCount(List<JobInfo> jobs) {
+    final byId = {for (final job in jobs) job.id: job};
+    return this.jobs
+        .where((a) => byId[a.jobId]?.stage == JobStage.completed)
+        .length;
+  }
+}
+
+/// Where a suggested project version came from (P4-05).
+enum PinSource {
+  project('project'),
+  profile('profile'),
+  global('global');
+
+  const PinSource(this.wire);
+
+  final String wire;
+
+  static PinSource fromWire(String wire) => PinSource.values.firstWhere(
+    (s) => s.wire == wire,
+    orElse: () => PinSource.global,
+  );
+
+  String get label => switch (this) {
+    PinSource.project => 'Project pin',
+    PinSource.profile => 'Profile policy',
+    PinSource.global => 'Current version',
+  };
+}
+
+/// One suggested pin in a project plan (P4-05).
+class ProjectPin {
+  const ProjectPin({
+    required this.packageId,
+    required this.version,
+    required this.source,
+    this.currentActive,
+    required this.changeNeeded,
+  });
+
+  final String packageId;
+  final String version;
+  final PinSource source;
+  final String? currentActive;
+  final bool changeNeeded;
+}
+
+/// A reviewable project plan. Planning never applies anything (P4-05).
+class ProjectPlan {
+  const ProjectPlan({
+    required this.projectName,
+    required this.pins,
+    required this.unresolved,
+  });
+
+  final String projectName;
+  final List<ProjectPin> pins;
+  final List<String> unresolved;
+
+  /// Pins that would change the current environment (need install/activate).
+  List<ProjectPin> get changes => pins.where((p) => p.changeNeeded).toList();
+}
+
 /// Installation status shown on the Installed screen ("mock version
 /// states", DESIGN.md §11).
 enum InstalledStatus {

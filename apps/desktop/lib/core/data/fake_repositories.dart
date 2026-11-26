@@ -30,6 +30,10 @@ class FixtureCatalogRepository implements CatalogRepository {
       fixtureProfileDocuments.map(_parseProfile).toList()
         ..sort((a, b) => a.id.compareTo(b.id));
 
+  /// Personal profiles created/edited in this session (in memory mirror of
+  /// the `origin = 'user'` rows; catalog profiles stay read-only).
+  final Map<String, ProfileInfo> _personalProfiles = {};
+
   @override
   Future<List<CatalogPackage>> packages() async => List.unmodifiable(_packages);
 
@@ -43,6 +47,205 @@ class FixtureCatalogRepository implements CatalogRepository {
 
   @override
   Future<List<ProfileInfo>> profiles() async => List.unmodifiable(_profiles);
+
+  @override
+  Future<ProfileResolution> resolveProfile(String profileId) async {
+    final profile = _profiles.firstWhere(
+      (p) => p.id == profileId,
+      orElse: () => throw StateError('unknown profile $profileId'),
+    );
+    final packages = <ResolvedProfilePackage>[];
+    final skipped = <SkippedProfilePackage>[];
+    for (final selection in profile.packages) {
+      final catalog = _packages
+          .where((p) => p.id == selection.packageId)
+          .cast<CatalogPackage?>()
+          .firstOrNull;
+      if (catalog == null || catalog.versions.isEmpty) {
+        if (selection.required) {
+          throw StateError(
+            'required package unavailable: ${selection.packageId}',
+          );
+        }
+        skipped.add(
+          SkippedProfilePackage(
+            packageId: selection.packageId,
+            reason: ProfileSkipReason.packageUnavailable,
+          ),
+        );
+        continue;
+      }
+      PackageVersionInfo? picked;
+      switch (selection.policy) {
+        case VersionPolicyName.exact:
+          picked = catalog.versions
+              .where((v) => v.version == selection.version)
+              .cast<PackageVersionInfo?>()
+              .firstOrNull;
+          break;
+        case VersionPolicyName.stable:
+          picked = catalog.versions
+              .where((v) => !v.isPrerelease)
+              .cast<PackageVersionInfo?>()
+              .firstOrNull;
+          break;
+        case VersionPolicyName.latest:
+          picked = catalog.versions.first;
+          break;
+        case VersionPolicyName.channel:
+          picked = catalog.versions
+              .where((v) => v.channel.wire == selection.channel)
+              .cast<PackageVersionInfo?>()
+              .firstOrNull;
+          break;
+      }
+      if (picked == null) {
+        if (selection.required) {
+          throw StateError('no matching version: ${selection.packageId}');
+        }
+        skipped.add(
+          SkippedProfilePackage(
+            packageId: selection.packageId,
+            reason: ProfileSkipReason.noMatchingVersion,
+          ),
+        );
+        continue;
+      }
+      packages.add(
+        ResolvedProfilePackage(
+          packageId: selection.packageId,
+          required: selection.required,
+          policy: selection.policy.wire,
+          version: picked.version,
+        ),
+      );
+    }
+    return ProfileResolution(
+      profileId: profileId,
+      packages: packages,
+      skipped: skipped,
+    );
+  }
+
+  @override
+  Future<List<ProfileInfo>> personalProfiles() async {
+    final list = _personalProfiles.values.toList()
+      ..sort((a, b) => a.id.compareTo(b.id));
+    return List.unmodifiable(list);
+  }
+
+  @override
+  Future<ProfileInfo> savePersonalProfile(String manifestJson) async {
+    final parsed = _parseProfile(manifestJson);
+    // Catalog profiles are read-only: never allow a personal profile to
+    // shadow one (mirrors the Rust origin guard).
+    if (_profiles.any((p) => p.id == parsed.id)) {
+      throw StateError('a catalog profile with this id cannot be overwritten');
+    }
+    _personalProfiles[parsed.id] = parsed;
+    return parsed;
+  }
+
+  @override
+  Future<bool> deletePersonalProfile(String id) async =>
+      _personalProfiles.remove(id) != null;
+
+  @override
+  Future<ProjectPlan> planProject(
+    String projectJson, {
+    String? profileId,
+  }) async {
+    final map = jsonDecode(projectJson) as Map<String, dynamic>;
+    final name = map['name'] as String? ?? 'Project';
+    final pins = <ProjectPin>[];
+    final unresolved = <String>[];
+
+    // Optional profile policy lookup (personal or catalog).
+    ProfileInfo? profile;
+    if (profileId != null) {
+      profile =
+          _personalProfiles[profileId] ??
+          _profiles
+              .where((p) => p.id == profileId)
+              .cast<ProfileInfo?>()
+              .firstOrNull;
+    }
+
+    for (final raw in (map['packages'] as List<dynamic>? ?? const [])) {
+      final req = raw as Map<String, dynamic>;
+      final packageId = req['package_id'] as String;
+      final required = req['required'] as bool? ?? false;
+      final policy = VersionPolicyName.fromWire(
+        req['version_policy'] as String? ?? 'stable',
+      );
+      final pinVersion = req['version'] as String?;
+
+      final catalog = _packages
+          .where((p) => p.id == packageId)
+          .cast<CatalogPackage?>()
+          .firstOrNull;
+      // Pick a version by policy: exact pin, else newest stable/latest.
+      String? version;
+      if (policy == VersionPolicyName.exact) {
+        version = catalog?.versions
+            .where((v) => v.version == pinVersion)
+            .cast<PackageVersionInfo?>()
+            .firstOrNull
+            ?.version;
+      } else if (catalog != null && catalog.versions.isNotEmpty) {
+        if (policy == VersionPolicyName.stable) {
+          version = catalog.versions
+              .where((v) => !v.isPrerelease)
+              .cast<PackageVersionInfo?>()
+              .firstOrNull
+              ?.version;
+        } else {
+          version = catalog.versions.first.version;
+        }
+      }
+      // If the project pin could not resolve, try the profile's policy.
+      var source = PinSource.project;
+      if (version == null && profile != null) {
+        final selection = profile.packages
+            .where((p) => p.packageId == packageId)
+            .cast<ProfilePackageRef?>()
+            .firstOrNull;
+        if (selection != null &&
+            catalog != null &&
+            catalog.versions.isNotEmpty) {
+          version =
+              (selection.policy == VersionPolicyName.stable
+                      ? catalog.versions
+                            .where((v) => !v.isPrerelease)
+                            .cast<PackageVersionInfo?>()
+                            .firstOrNull
+                      : catalog.versions
+                            .cast<PackageVersionInfo?>()
+                            .firstOrNull)
+                  ?.version;
+          source = PinSource.profile;
+        }
+      }
+
+      if (version == null) {
+        if (required) {
+          throw StateError('required project pin cannot resolve: $packageId');
+        }
+        unresolved.add(packageId);
+        continue;
+      }
+      pins.add(
+        ProjectPin(
+          packageId: packageId,
+          version: version,
+          source: source,
+          currentActive: null, // fixtures have no global active mapping
+          changeNeeded: true,
+        ),
+      );
+    }
+    return ProjectPlan(projectName: name, pins: pins, unresolved: unresolved);
+  }
 
   /// Parse a package manifest. Throws [FormatException] on missing/invalid
   /// fields — screens render an error state for corrupt catalog data.
@@ -570,6 +773,48 @@ class FakeJobsRepository implements JobsRepository {
     job.timer = Timer.periodic(_tick, (_) => _advance(job));
     _emit();
     return job.id;
+  }
+
+  @override
+  Future<ProfileApplyResult> applyProfile(
+    String profileId,
+    List<String> selectedPackageIds,
+  ) async {
+    // Resolve against the same fixture catalog the Profiles screen shows;
+    // only optional packages the user selected are enqueued, required ones
+    // always are (mirrors the Rust plan_profile_jobs policy).
+    final plan = await FixtureCatalogRepository().resolveProfile(profileId);
+    final jobs = <ProfileApplyJob>[];
+    final skipped = <SkippedProfilePackage>[...plan.skipped];
+    for (final package in plan.packages) {
+      if (!package.required &&
+          !selectedPackageIds.contains(package.packageId)) {
+        skipped.add(
+          SkippedProfilePackage(
+            packageId: package.packageId,
+            reason: ProfileSkipReason.deselected,
+          ),
+        );
+        continue;
+      }
+      final id = await startInstall(
+        packageId: package.packageId,
+        packageLabel: package.packageId,
+        version: package.version,
+      );
+      jobs.add(
+        ProfileApplyJob(
+          packageId: package.packageId,
+          version: package.version,
+          jobId: id,
+        ),
+      );
+    }
+    return ProfileApplyResult(
+      profileId: profileId,
+      jobs: jobs,
+      skipped: skipped,
+    );
   }
 
   void _advance(_FakeJob job) {

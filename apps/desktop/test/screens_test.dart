@@ -353,7 +353,10 @@ void main() {
       await goTo(tester, Icons.people_outline);
 
       expect(find.text('Flutter Developer'), findsOneWidget);
-      expect(find.text('Python Developer', skipOffstage: false), findsOneWidget);
+      expect(
+        find.text('Python Developer', skipOffstage: false),
+        findsOneWidget,
+      );
 
       final flutterCard = find
           .ancestor(
@@ -526,6 +529,29 @@ void main() {
         find.byIcon(Icons.delete_outline, skipOffstage: false),
         findsOneWidget,
       );
+    });
+
+    testWidgets('project pinning section exposes the preview affordance', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+      await goTo(tester, Icons.people_outline);
+
+      // Scroll the lazy ListView until the collapsed section is built.
+      await tester.scrollUntilVisible(
+        find.text('Project version pins'),
+        300,
+        scrollable: find.byType(Scrollable),
+      );
+      await tester.pumpAndSettle();
+
+      // The section is present and collapsed by default (design: it does not
+      // push the profile cards off-screen). Planning behavior itself is
+      // covered by the repository tests in ffi_repositories_test.dart.
+      expect(find.text('Project version pins'), findsOneWidget);
+      expect(find.byIcon(Icons.expand_more), findsWidgets);
+      expect(find.text('Preview changes'), findsNothing);
     });
   });
 
@@ -774,6 +800,39 @@ void main() {
         reason: 'the bar itself must be indeterminate',
       );
       expect(find.textContaining(RegExp(r'^\d+%$')), findsNothing);
+    });
+
+    testWidgets('announces stage changes with a semantic live region', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: ProgressStage(stage: JobStage.downloading, progress: 0.5),
+          ),
+        ),
+      );
+
+      // DESIGN.md §10: the stage + measurable progress is exposed as a
+      // live-region semantic label for screen readers, not color/visual only.
+      final semantics = tester.getSemantics(find.byType(ProgressStage));
+      expect(semantics.label, contains('Downloading'));
+      expect(semantics.label, contains('50 percent'));
+      expect(semantics.flagsCollection.isLiveRegion, isTrue);
+    });
+
+    testWidgets('indeterminate stage announces no fake percentage', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(body: ProgressStage(stage: JobStage.verifying)),
+        ),
+      );
+      final semantics = tester.getSemantics(find.byType(ProgressStage));
+      expect(semantics.label, contains('Verifying checksum'));
+      expect(semantics.label, contains('progress unavailable'));
+      expect(semantics.label, isNot(contains('percent')));
     });
   });
 

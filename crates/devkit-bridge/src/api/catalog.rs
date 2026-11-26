@@ -149,7 +149,7 @@ fn package_dto(manifest: PackageManifest) -> CatalogPackageDto {
     }
 }
 
-fn profile_dto(manifest: ProfileManifest) -> CatalogProfileDto {
+pub(crate) fn profile_dto(manifest: ProfileManifest) -> CatalogProfileDto {
     CatalogProfileDto {
         id: manifest.id,
         name: manifest.name,

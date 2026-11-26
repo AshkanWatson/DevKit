@@ -13,8 +13,16 @@
 //! paths is allowed by the contract).
 
 use std::path::{Path, PathBuf};
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
+
+// Both tests in this binary share one process-global engine (a single
+// SQLite database). The install worker threads and the resolver write to
+// that DB; running the two flow tests concurrently races SQLite and can
+// strand a job in QUEUED (seen intermittently on Linux CI, which uses
+// default parallel test threads). Serialize them — the ordering of these
+// two independent flows is not under test.
+static FLOW_LOCK: Mutex<()> = Mutex::new(());
 
 use devkit_bridge::api::engine::get_engine_paths;
 use devkit_bridge::api::installed::{
@@ -225,6 +233,7 @@ fn wait_terminal(job_id: &str) -> String {
 
 #[test]
 fn full_install_flow_through_bridge_operations() {
+    let _guard = FLOW_LOCK.lock().unwrap();
     let paths = engine_paths();
 
     // Engine path facts (Settings/Storage screen data).
@@ -396,6 +405,7 @@ fn full_install_flow_through_bridge_operations() {
 
 #[test]
 fn start_install_rejects_bad_input_without_touching_jobs() {
+    let _guard = FLOW_LOCK.lock().unwrap();
     // engine_paths() ensures init happened for this binary too.
     engine_paths();
     let error =

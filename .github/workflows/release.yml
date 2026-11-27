@@ -1,15 +1,20 @@
 name: Release
 
-# Automatic release pipeline (HANDOFF.md §16):
+# Automatic release pipeline (HANDOFF.md §16, Phase 5):
 #   push a version tag (git tag v0.1.0 && git push origin v0.1.0)
 #   -> preflight validates the tag
-#   -> the full Flutter test suite runs first; a failure blocks the release
-#   -> only a green test run builds the Windows executable bundle
-#   -> portable .zip, setup .exe installer, checksums, and Windows test
-#      results are attached to a GitHub Release
+#   -> each native runner re-runs the required test suite before packaging
+#   -> only green test runs build the per-platform release bundles
+#   -> macOS .dmg, Linux .tar.gz, Windows portable .zip + Inno Setup .exe,
+#      checksums, and the Windows test results are attached to a GitHub Release
 #
-# Windows-only by scope decision for now (interim, recorded in HANDOFF.md §16
-# and tasks/BACKLOG.md); macOS/Linux packaging returns in Phase 5.
+# All three platform builds are REQUIRED: a failed platform build fails the
+# release rather than silently publishing a partial set (HANDOFF.md §16).
+# Code signing / macOS notarization is a separate gated task (P5-04): it needs
+# maintainer credentials (CI secrets) and is never faked here. Until signing is
+# configured, the macOS .dmg is unsigned; release notes must not claim
+# notarization. Clean-machine launch validation on a fresh VM is gated on the
+# first real CI run; the in-job smoke steps verify artifact structure.
 
 on:
   push:
@@ -82,6 +87,16 @@ jobs:
           $version = if ($env:GITHUB_REF_NAME -match '^v(.+)$') { $Matches[1] } else { "0.1.0" }
           & $iscc /DAPP_VERSION=$version packaging\windows\devkit.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Windows artifact smoke validation
+        shell: pwsh
+        run: |
+          # Verify the portable bundle contains the app executable.
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $zip = [System.IO.Compression.ZipFile]::OpenRead("DevKit-Windows-x64.zip")
+          try {
+            $names = $zip.Entries | ForEach-Object { $_.FullName }
+            if (-not ($names -match 'devkit\.exe$')) { Write-Error "devkit.exe missing from portable zip" }
+          } finally { $zip.Dispose() }
       - uses: actions/upload-artifact@v4
         with:
           name: DevKit-Windows-x64
@@ -95,13 +110,107 @@ jobs:
           name: DevKit-Windows-test-results
           path: DevKit-Windows-test-results.txt
 
-  publish:
-    name: Publish GitHub Release
-    needs: build-windows
+  build-macos:
+    name: Test and build macOS
+    needs: preflight
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.8 # pinned, see ADR 0005
+          cache: true
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates
+      - name: Run macOS tests
+        run: |
+          cd apps/desktop
+          flutter pub get
+          flutter test
+      - name: Build macOS release
+        run: |
+          cd apps/desktop
+          flutter build macos --release
+      - name: Package macOS output (.dmg)
+        run: |
+          set -euo pipefail
+          APP="apps/desktop/build/macos/Build/Products/Release/devkit.app"
+          test -d "$APP"
+          test -x "$APP/Contents/MacOS/devkit"
+          hdiutil create -volname DevKit -srcfolder "$APP" -ov -format UDZO DevKit-macOS.dmg
+      - name: macOS artifact smoke validation
+        run: |
+          set -euo pipefail
+          hdiutil verify DevKit-macOS.dmg
+          hdiutil attach DevKit-macOS.dmg -mountpoint /tmp/devkit-dmg -nobrowse -readonly
+          test -d /tmp/devkit-dmg/devkit.app
+          test -x /tmp/devkit-dmg/devkit.app/Contents/MacOS/devkit
+          hdiutil detach /tmp/devkit-dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DevKit-macOS
+          path: DevKit-macOS.dmg
+
+  build-linux:
+    name: Test and build Linux
+    needs: preflight
     runs-on: ubuntu-latest
     steps:
-      # Contains DevKit-Windows-x64.zip (portable), DevKit-Windows-x64-setup.exe
-      # (installer), and DevKit-Windows-test-results.txt.
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.8 # pinned, see ADR 0005
+          cache: true
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+      - name: Run Linux tests
+        run: |
+          cd apps/desktop
+          flutter pub get
+          flutter test
+      - name: Build Linux release
+        run: |
+          cd apps/desktop
+          flutter build linux --release
+      - name: Package Linux output (.tar.gz)
+        run: |
+          set -euo pipefail
+          BUNDLE="apps/desktop/build/linux/x64/release/bundle"
+          test -x "$BUNDLE/devkit"
+          mkdir -p stage/DevKit
+          cp -a "$BUNDLE/." stage/DevKit/
+          tar -czf DevKit-Linux-x64.tar.gz -C stage DevKit
+      - name: Linux artifact smoke validation
+        run: |
+          set -euo pipefail
+          tar -tzf DevKit-Linux-x64.tar.gz | grep -q 'DevKit/devkit$'
+          mkdir -p /tmp/devkit-linux-smoke
+          tar -xzf DevKit-Linux-x64.tar.gz -C /tmp/devkit-linux-smoke
+          test -x /tmp/devkit-linux-smoke/DevKit/devkit
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DevKit-Linux-x64
+          path: DevKit-Linux-x64.tar.gz
+
+  publish:
+    name: Publish GitHub Release
+    # All three platform builds are required — no partial releases.
+    needs: [build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      # Contains DevKit-Windows-x64.zip (portable),
+      # DevKit-Windows-x64-setup.exe (installer), DevKit-macOS.dmg,
+      # DevKit-Linux-x64.tar.gz, and DevKit-Windows-test-results.txt.
       - uses: actions/download-artifact@v4
         with:
           path: release-assets
@@ -110,8 +219,22 @@ jobs:
         run: |
           cd release-assets
           sha256sum * > SHA256SUMS.txt
+      - name: Release notes preamble
+        run: |
+          cat > release-notes.md <<'EOF'
+          DevKit release artifacts: Windows (portable zip + Inno Setup installer),
+          macOS (.dmg), Linux (.tar.gz). SHA-256 checksums in SHA256SUMS.txt.
+
+          Note: the macOS .dmg is currently unsigned/notarization pending CI
+          signing credentials (P5-04); macOS Gatekeeper may require a manual
+          override until notarization is configured. Clean-machine launch
+          validation is part of this pipeline's artifact smoke checks; full
+          fresh-VM validation runs with the first tagged release.
+          EOF
       - uses: softprops/action-gh-release@v2
         with:
           files: |
             release-assets/*
+            release-notes.md
+          body_path: release-notes.md
           generate_release_notes: true

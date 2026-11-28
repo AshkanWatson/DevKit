@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../app/theme/design_tokens.dart';
@@ -34,11 +35,12 @@ class DownloadsScreen extends ConsumerWidget {
           final active = list.where((job) => job.isActive).toList();
           final history = list.where((job) => !job.isActive).toList();
           if (list.isEmpty) {
-            return const EmptyState(
-              title: 'No downloads yet',
+            return EmptyState(
+              title: 'Nothing downloading yet.',
               message:
-                  'Install jobs appear here. Start one from a package page '
-                  'in Explore.',
+                  'Explore developer tools and install your first package.',
+              actionLabel: 'Explore',
+              onAction: () => context.go('/explore'),
             );
           }
           return ListView(

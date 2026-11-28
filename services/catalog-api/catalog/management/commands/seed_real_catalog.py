@@ -6,9 +6,13 @@ the actual published files (see scripts/verify_catalog_artifacts.py, which
 re-verifies every URL, size, and hash against the vendor servers).
 
 Facts recorded here were measured from the vendor releases on 2026-11-15
-(HTTPS GET + SHA-256 over the full body). If a vendor replaces a file,
-`python manage.py seed_real_catalog` alone is not enough: re-measure and
-update this file, then run scripts/verify_catalog_artifacts.py.
+(HTTPS GET + SHA-256 over the full body). Flutter (P5-09) is the exception:
+its URL, SHA-256 and channel come from Google's own release manifest
+(`releases_<os>.json`), and its size from the authoritative HTTPS
+`Content-Length` HEAD response on 2026-11-28 — no value is guessed. If a
+vendor replaces a file, `python manage.py seed_real_catalog` alone is not
+enough: re-measure and update this file, then run
+scripts/verify_catalog_artifacts.py.
 
 This command never downloads anything — it writes metadata only. Tests
 stay offline (testing-strategy.md); the real-URL verification is the
@@ -60,6 +64,103 @@ SEED_PACKAGES: list[dict] = [
                         ),
                         "size_bytes": 11094114,
                         "executable_relative_path": "python.exe",
+                    },
+                ],
+            },
+        ],
+    },
+    {
+        # P5-09 (ADR 0009): Flutter is the first official-provider package.
+        # Values below are copied from the verified 2026-11-28 Flutter
+        # release manifests (stable 3.50.1) and HTTPS HEAD lengths. The
+        # Rust `FlutterSource` resolves these live at install time; this
+        # row exists so browsing/details show real metadata.
+        "id": "devkit.framework.flutter",
+        "name": "Flutter",
+        "description": (
+            "Google's UI toolkit for building natively compiled applications "
+            "for mobile, web, and desktop from a single codebase."
+        ),
+        "publisher": "Google",
+        "homepage": "https://flutter.dev/",
+        "category": "framework",
+        "license_expression": "BSD-3-Clause",
+        "maintainer": "devkit-maintainers",
+        "platforms": [
+            "windows-x64",
+            "macos-x64",
+            "macos-arm64",
+            "linux-x64",
+        ],
+        "versions": [
+            {
+                "version": "3.50.1",
+                "channel": "stable",
+                "release_date": datetime.date(2026, 11, 20),
+                "artifacts": [
+                    {
+                        "os": "windows",
+                        "architecture": "x64",
+                        "installer": "archive",
+                        "url": (
+                            "https://storage.googleapis.com/"
+                            "flutter_infra_release/releases/stable/windows/"
+                            "flutter_windows_3.50.1-stable.zip"
+                        ),
+                        "sha256": (
+                            "33c1e3d4dd08f1136ddb9c7976cfd2b0ab20296f1565"
+                            "b78ba176a4cbb4e140eb"
+                        ),
+                        "size_bytes": 1869410092,
+                        "executable_relative_path": "flutter/bin/flutter.bat",
+                    },
+                    {
+                        "os": "macos",
+                        "architecture": "x64",
+                        "installer": "archive",
+                        "url": (
+                            "https://storage.googleapis.com/"
+                            "flutter_infra_release/releases/stable/macos/"
+                            "flutter_macos_3.50.1-stable.zip"
+                        ),
+                        "sha256": (
+                            "5c3d3bbabc8edd58eb98605047c59c31a82895cfe7d"
+                            "119318d0f62cdbd5d47ed"
+                        ),
+                        "size_bytes": 2141226529,
+                        "executable_relative_path": "flutter/bin/flutter",
+                    },
+                    {
+                        "os": "macos",
+                        "architecture": "arm64",
+                        "installer": "archive",
+                        "url": (
+                            "https://storage.googleapis.com/"
+                            "flutter_infra_release/releases/stable/macos/"
+                            "flutter_macos_arm64_3.50.1-stable.zip"
+                        ),
+                        "sha256": (
+                            "872883d49965e0cc1d8e477d2d87f2f45930d13f94"
+                            "b34889e53783586f04c715"
+                        ),
+                        "size_bytes": 2145372380,
+                        "executable_relative_path": "flutter/bin/flutter",
+                    },
+                    {
+                        "os": "linux",
+                        "architecture": "x64",
+                        "installer": "archive",
+                        "url": (
+                            "https://storage.googleapis.com/"
+                            "flutter_infra_release/releases/stable/linux/"
+                            "flutter_linux_3.50.1-stable.tar.xz"
+                        ),
+                        "sha256": (
+                            "4ad17fc8462fbcef2ba19ff4a78c0a16b7147fde1a"
+                            "dd8578e267ea62cdb92678"
+                        ),
+                        "size_bytes": 1518418752,
+                        "executable_relative_path": "flutter/bin/flutter",
                     },
                 ],
             },

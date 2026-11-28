@@ -18,6 +18,8 @@ devkit-download = { path = "../devkit-download" }
 devkit-install = { path = "../devkit-install" }
 devkit-jobs = { path = "../devkit-jobs" }
 devkit-registry = { path = "../devkit-registry" }
+# P5-09: official provider-based artifact source resolution (ADR 0009).
+devkit-sources = { path = "../devkit-sources" }
 # Default data-root resolution (HANDOFF.md §6: OS-standard user data
 # locations, never hard-coded paths).
 dirs = "6"

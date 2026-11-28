@@ -272,22 +272,31 @@ class SeedRealCatalogTests(TestCase):
 
         call_command("seed_real_catalog", verbosity=0)
 
-    def test_seeds_three_real_published_packages(self):
+    def test_seeds_only_verified_published_packages(self):
         packages = Package.objects.filter(is_published=True)
         self.assertEqual(
             {p.id for p in packages},
-            {"devkit.lang.python", "devkit.utility.ripgrep", "devkit.utility.fd"},
+            {
+                "devkit.lang.python",
+                "devkit.utility.ripgrep",
+                "devkit.utility.fd",
+                "devkit.framework.flutter",
+            },
         )
         self.assertEqual(packages.count(), Package.objects.count())
 
     def test_seeded_artifacts_are_publishable_shape(self):
         artifacts = Artifact.objects.all()
-        self.assertEqual(artifacts.count(), 3)
+        # Python, ripgrep, fd + four verified Flutter platform archives.
+        self.assertEqual(artifacts.count(), 7)
         for artifact in artifacts:
             self.assertTrue(artifact.url.startswith("https://"))
             self.assertEqual(len(artifact.sha256), 64)
             self.assertGreater(artifact.size_bytes, 0)
-            self.assertTrue(artifact.executable_relative_path.endswith(".exe"))
+            # Windows artifacts end in .exe; Flutter's macOS/Linux entry
+            # points at the extensionless `flutter/bin/flutter` script.
+            self.assertTrue(artifact.executable_relative_path)
+            self.assertNotIn("..", artifact.executable_relative_path)
             # Versioned vendor releases only — never "latest" redirects.
             self.assertNotIn("latest", artifact.url)
 
@@ -295,13 +304,13 @@ class SeedRealCatalogTests(TestCase):
         from django.core.management import call_command
 
         call_command("seed_real_catalog", verbosity=0)
-        self.assertEqual(Package.objects.count(), 3)
-        self.assertEqual(Artifact.objects.count(), 3)
-        self.assertEqual(PackageVersion.objects.count(), 3)
+        self.assertEqual(Package.objects.count(), 4)
+        self.assertEqual(Artifact.objects.count(), 7)
+        self.assertEqual(PackageVersion.objects.count(), 4)
 
     def test_seeded_packages_are_visible_via_the_public_api(self):
         payload = json.loads(self.client.get("/api/v1/catalog/packages").content)
-        self.assertEqual(payload["count"], 3)
+        self.assertEqual(payload["count"], 4)
         ids = {item["id"] for item in payload["results"]}
         self.assertIn("devkit.lang.python", ids)
         manifest = json.loads(

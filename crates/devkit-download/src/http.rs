@@ -71,24 +71,54 @@ pub fn validate_url(url: &str) -> Result<Url, DownloadError> {
     Ok(parsed)
 }
 
-/// The redirect decision (security model §3.3), pure so it can be
-/// unit-tested without any HTTP: redirects must stay on the same host and
-/// the same scheme (no HTTPS→HTTP downgrade, no host switch), and the
-/// chain is capped.
+/// GitHub's official release hosts. A redirect from one of these to the
+/// asset-delivery allowlist below is a legitimate CDN hop, not a policy bypass
+/// (ADR 0008). These are compile-time constants — catalog data can never add a
+/// trusted destination.
+const GITHUB_RELEASE_HOSTS: &[&str] = &["github.com"];
+const GITHUB_ASSET_HOSTS: &[&str] = &[
+    "objects.githubusercontent.com",
+    "github-releases.githubusercontent.com",
+];
+
+/// The redirect decision (security model §3.3, ADR 0008), pure so it can be
+/// unit-tested without any HTTP.
+///
+/// Allowed:
+/// - same host + HTTPS (the original rule), and
+/// - HTTPS original on a GitHub release host → HTTPS target on GitHub's
+///   asset-delivery allowlist (the legitimate `github.com` → CDN hop).
+///
+/// Rejected: HTTPS→HTTP downgrades, cross-host redirects to any other host,
+/// userinfo credentials (rejected upstream by `validate_url`), and chains
+/// longer than 5. The loopback carve-out keeps fixture-server tests working.
 pub fn redirect_allowed(original: &Url, next: &Url, previous_count: usize) -> Result<(), String> {
     if previous_count > 5 {
         return Err("too many redirects".to_owned());
     }
-    let original_host = original.host_str().unwrap_or_default().to_owned();
-    let same_host = next.host_str().unwrap_or_default() == original_host;
+    // Credentials are never forwarded across a redirect hop.
+    if !next.username().is_empty() || next.password().is_some() {
+        return Err("credentials in redirect target".to_owned());
+    }
+    let original_host = original.host_str().unwrap_or_default().to_ascii_lowercase();
+    let next_host = next.host_str().unwrap_or_default().to_ascii_lowercase();
+    let same_host = next_host == original_host;
     let same_scheme = next.scheme() == original.scheme();
+    // No HTTPS→HTTP downgrade: target must be HTTPS or the loopback carve-out.
     let scheme_allowed =
         next.scheme() == "https" || is_loopback_host(next.host_str().unwrap_or_default());
     if same_host && same_scheme && scheme_allowed {
-        Ok(())
-    } else {
-        Err("redirect leaves the approved host or scheme".to_owned())
+        return Ok(());
     }
+    // Trusted cross-host hop (ADR 0008): GitHub release host → GitHub asset
+    // CDN, both HTTPS, never carrying URL credentials.
+    if next.scheme() == "https"
+        && GITHUB_RELEASE_HOSTS.contains(&original_host.as_str())
+        && GITHUB_ASSET_HOSTS.contains(&next_host.as_str())
+    {
+        return Ok(());
+    }
+    Err("redirect leaves the approved host or scheme".to_owned())
 }
 
 /// Production transport: reqwest over rustls (ADR 0002), HTTPS-only with
@@ -244,6 +274,61 @@ mod tests {
         assert!(redirect_allowed(
             &loopback_original,
             &url("http://releases.example.invalid/a.bin"),
+            1
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn github_release_host_may_redirect_to_asset_cdn() {
+        // ADR 0008: the legitimate github.com → objects.githubusercontent.com
+        // hop must be allowed; the artifact is still SHA-256 verified later.
+        let original = url("https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/rg.zip");
+        assert!(redirect_allowed(
+            &original,
+            &url("https://objects.githubusercontent.com/asset/rg.zip"),
+            1
+        )
+        .is_ok());
+        assert!(redirect_allowed(
+            &original,
+            &url("https://github-releases.githubusercontent.com/asset/rg.zip"),
+            1
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn cross_host_redirect_to_untrusted_host_is_still_blocked() {
+        // The allowlist is narrow: a github.com original may NOT redirect to
+        // arbitrary hosts, and non-GitHub originals may not cross hosts at all.
+        let original = url("https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/rg.zip");
+        assert!(
+            redirect_allowed(&original, &url("https://evil.example.invalid/rg.zip"), 1).is_err()
+        );
+        let other = url("https://releases.example.invalid/a.bin");
+        assert!(redirect_allowed(
+            &other,
+            &url("https://objects.githubusercontent.com/a.bin"),
+            1
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn github_cdn_redirect_rejects_downgrade_and_credentials() {
+        let original = url("https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/rg.zip");
+        // HTTPS→HTTP downgrade to the CDN is rejected.
+        assert!(redirect_allowed(
+            &original,
+            &url("http://objects.githubusercontent.com/rg.zip"),
+            1
+        )
+        .is_err());
+        // Credentials in the redirect target are never forwarded.
+        assert!(redirect_allowed(
+            &original,
+            &url("https://user:pass@objects.githubusercontent.com/rg.zip"),
             1
         )
         .is_err());

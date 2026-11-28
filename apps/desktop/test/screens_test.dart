@@ -340,7 +340,7 @@ void main() {
 
       await tester.pumpAndSettle();
       // The screen navigates to Downloads where the (empty) job list shows.
-      expect(find.text('No downloads yet'), findsOneWidget);
+      expect(find.text('Nothing downloading yet.'), findsOneWidget);
     });
   });
 
@@ -717,6 +717,27 @@ void main() {
   });
 
   group('Downloads', () {
+    testWidgets('empty state offers Explore navigation', (tester) async {
+      await tester.pumpWidget(
+        buildApp(
+          overrides: [
+            jobsRepositoryProvider.overrideWithValue(
+              _RecordingJobsRepository(),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+      await goTo(tester, Icons.download_outlined);
+
+      expect(find.text('Nothing downloading yet.'), findsOneWidget);
+      expect(
+        find.text('Explore developer tools and install your first package.'),
+        findsOneWidget,
+      );
+      expect(find.text('Explore'), findsWidgets);
+    });
+
     testWidgets('history shows completed and failed jobs with error details', (
       tester,
     ) async {

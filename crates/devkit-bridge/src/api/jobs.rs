@@ -21,6 +21,7 @@ use crate::frb_generated::StreamSink;
 
 use super::engine::{engine, managed_root, open_db};
 use super::error::{bridge_error, from_jobs_error, BridgeError, BridgeErrorCode};
+use super::sources;
 
 /// One entry of a job's structured event log (contract § Event model).
 #[derive(Debug, Clone)]
@@ -135,11 +136,37 @@ pub fn start_install(package_id: String, version: String) -> Result<String, Brid
 /// the engine's manager; the job runs independently of any caller lifecycle.
 pub(crate) fn enqueue_real_install(package_id: &str, version: &str) -> Result<String, BridgeError> {
     let state = engine()?;
+    let transport = ReqwestDownloadHttp::new()
+        .map_err(|error| bridge_error(BridgeErrorCode::NetworkError, error.to_string()))?;
+
+    // P5-09 (ADR 0009): packages with a committed official provider AND an
+    // official checksum resolve from that provider. Packages whose provider
+    // publishes no checksum (fd) keep their existing catalogued install path
+    // rather than being installed with an invented digest.
+    if sources::has_provider(package_id) && sources::provider_has_official_checksum(package_id) {
+        let (concrete_version, artifact) = sources::resolve_provider_artifact(package_id, version)?;
+        let config = RealInstallConfig {
+            managed_root: managed_root()?.to_path_buf(),
+            transport,
+            source: sources::ProviderSource::new(
+                package_id.to_owned(),
+                concrete_version.clone(),
+                artifact,
+            ),
+            limits: ArchiveLimits::default(),
+            vendor_runner: Box::new(ProcessExeRunner),
+            validation_hook: None,
+        };
+        return state
+            .manager
+            .enqueue_real_install(config, package_id, &concrete_version)
+            .map_err(from_jobs_error);
+    }
+
     let source = RegistrySource::new(open_db()?);
     let config = RealInstallConfig {
         managed_root: managed_root()?.to_path_buf(),
-        transport: ReqwestDownloadHttp::new()
-            .map_err(|error| bridge_error(BridgeErrorCode::NetworkError, error.to_string()))?,
+        transport,
         source,
         limits: ArchiveLimits::default(),
         vendor_runner: Box::new(ProcessExeRunner),

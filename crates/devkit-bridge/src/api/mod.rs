@@ -20,6 +20,7 @@ pub mod installed;
 pub mod jobs;
 pub mod profiles;
 pub mod simple;
+pub(crate) mod sources;
 
 /// Identity of the running engine, for About / diagnostics.
 #[derive(Debug, Clone)]
